@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#070b12">
+  <title>Os Brutus do Barulho</title>
+  <link rel="icon" href="assets/favicon.svg">
+  <link rel="stylesheet" href="ui/style.css">
+  <link rel="stylesheet" href="ui/characters.css">
+</head>
+<body>
+<main id="app">
+  <canvas id="game" width="1280" height="720" aria-label="Os Brutus do Barulho"></canvas>
+  <div id="scan"></div>
+  <section id="menu" class="panel">
+    <p class="eyebrow">A TROPA MAIS ATRAPALHADA DO MUNDO</p>
+    <h1>OS BRUTUS<br><span>DO BARULHO</span></h1>
+    <p class="tag">Explodir primeiro, perguntar depois!</p>
+    <div class="buttons">
+      <button data-action="new">COMEÇAR A BAGUNÇA</button>
+      <button data-action="continue">CONTINUAR O BARULHO</button>
+      <button data-action="missions">MAPA DAS CONFUSÕES</button>
+      <button data-action="characters">PERSONAGENS</button>
+      <button data-action="armory">ARSENAL & GAMBIARRAS</button>
+      <button data-action="how">COMO FAZER BARULHO</button>
+    </div>
+    <small>ENTER confirma · ESC volta · Gamepad compatível</small>
+  </section>
+  <section id="modal" class="panel hidden"></section>
+  <section id="hud" class="hidden">
+    <div class="hud-left"><b id="hpLabel">HP 100</b><div class="bar"><i id="hpBar"></i></div><span id="weapon">RIFLE · ∞</span></div>
+    <div class="hud-mid"><strong id="mission">MISSÃO 1</strong><span id="objective">AVANCE</span></div>
+    <div class="hud-right"><b id="score">000000</b><span id="grenades">GRANADAS ×3</span></div>
+    <div id="bossHud" class="hidden"><b id="bossName">CHEFE</b><div class="bar"><i id="bossBar"></i></div></div>
+    <div id="toast"></div>
+  </section>
+  <div id="touch" class="hidden">
+    <div class="dpad"><button data-key="ArrowLeft">◀</button><button data-key="ArrowRight">▶</button><button data-key="ArrowUp">▲</button></div>
+    <div class="actions"><button data-key="KeyX">💣</button><button data-key="KeyC">↯</button><button data-key="KeyZ">●</button></div>
+  </div>
+</main>
+<script type="module" src="js/main.js"></script>
+</body>
+</html>

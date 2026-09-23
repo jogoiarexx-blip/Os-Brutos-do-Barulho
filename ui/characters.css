@@ -1,0 +1,5 @@
+.roster{grid-template-columns:repeat(auto-fit,minmax(190px,1fr))}
+.hero-card{text-align:center;overflow:hidden}
+.hero-card:hover{transform:translateY(-3px)}
+.portrait{display:block;width:112px;height:112px;object-fit:cover;object-position:center top;margin:0 auto 10px;border-radius:50%;background:#111;border:3px solid currentColor;filter:drop-shadow(0 6px 10px #000)}
+.locked-face{display:grid;place-items:center;width:112px;height:112px;margin:0 auto 10px;border-radius:50%;background:#111;font-size:38px}
