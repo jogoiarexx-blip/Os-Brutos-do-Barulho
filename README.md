@@ -14,6 +14,7 @@ Depois acesse a pasta do projeto pelo endereço exibido no servidor local.
 - 6 personagens: 2 iniciais, 2 liberados ao zerar com os iniciais e 2 finais liberados ao zerar com o segundo grupo
 - Progresso individual por personagem, visuais próprios e vantagens exclusivas
 - Duas sprite sheets WebP por personagem: locomoção (30 quadros) e armas (25 quadros)
+- Quadros recortados e centralizados individualmente, com margem segura e pés alinhados
 - Caminhada, corrida com Shift, pulo em etapas, agachar, dano, queda, levantar e vitória
 - Rifle, metralhadora, escopeta, laser e lança-foguetes em pé e agachado
 - Espelhamento em tempo real para olhar à esquerda sem duplicar imagens
