@@ -62,7 +62,7 @@ export function drawLevelScenery(c,level,cam,time){
   if(level.id===2){
     c.fillStyle='#071a1c';c.fillRect(0,0,1280,720);
     repeatImage(c,jungle.backdrop,cam*.055,0,1525,555);
-    repeatImage(c,jungle.midground,cam*.22,242,1500,315);
+    repeatImage(c,jungle.midground,cam*.22,202,1065,355);
     const mist=c.createLinearGradient(0,300,0,570);mist.addColorStop(0,'#49d9d000');mist.addColorStop(1,'#49d9d022');c.fillStyle=mist;c.fillRect(0,300,1280,270);
     if(!repeatImage(c,jungle.ground,cam,555,495,165)){c.fillStyle=level.ground;c.fillRect(0,555,1280,165)}
     for(const item of level.scenery||[]){const[type,worldX,scale=1,flip=false]=item,x=worldX-cam;if(x>-220&&x<1500)drawJungleProp(c,type,x,555,scale,flip,time)}
