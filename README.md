@@ -18,6 +18,9 @@ Depois acesse a pasta do projeto pelo endereço exibido no servidor local.
 - Atlas animado com 6 classes de inimigos: soldado, metralhador, drone, escudeiro, mutante e elite
 - Sprites para jipe, tanque, mecha, refém, caixas de armas, vida, projéteis, granada e explosões
 - Fase 1 com cenário próprio em WebP: porto em chamas, parallax, piso industrial e 12 tipos de objetos ambientais
+- Chefe Colosso Ferroviário com 8 quadros, duas fases de combate, dano, explosão e carcaça
+- Caixas e barris destrutíveis; barris vermelhos causam dano em área e caixas podem liberar armas ou vida
+- Introdução protegida, ondas iniciais menores e disparos do chefe apontados para a posição do jogador
 - Caminhada, corrida com Shift, pulo em etapas, agachar, dano, queda, levantar e vitória
 - Rifle, metralhadora, escopeta, laser e lança-foguetes em pé e agachado
 - Espelhamento em tempo real para olhar à esquerda sem duplicar imagens

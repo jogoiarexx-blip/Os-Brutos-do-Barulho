@@ -1,6 +1,6 @@
 import {Player,Enemy,Bullet,Particle,clamp} from './entities.js';
 import {drawAtlas,vehicleRows,pickupCols} from './sprites.js';
-import {drawLevelScenery} from './scenery.js';
+import {drawLevelScenery,drawSceneryProp} from './scenery.js';
 
 export class Game{
   constructor(canvas,input,fx,saveData,onEnd){
@@ -14,10 +14,13 @@ export class Game{
     this.mult={easy:.75,normal:1,veteran:1.35,hardcore:1.65}[difficulty];
     this.player=new Player(this.saveData.upgrades);this.bullets=[];this.enemies=[];
     this.particles=[];this.spriteFx=[];this.pickups=[];
+    this.destructibles=(level.destructibles||[]).map(([type,x,scale=1,flip=false])=>({
+      type,x,y:555,scale,flip,hp:type==='crate'?42:34,max:type==='crate'?42:34,dead:false
+    }));
     this.hostages=level.hostages.map(x=>({x,y:555,rescued:false,celebrate:0}));
     this.spawned=new Set;this.cam=0;this.score=0;this.coins=0;this.kills=0;
     this.currentObjective=0;this.boss=null;this.vehicleTaken=false;this.checkpoint=0;
-    this.time=0;this.running=true;this.paused=false;this.last=performance.now();
+    this.time=0;this.intro=96;this.running=true;this.paused=false;this.last=performance.now();
     document.querySelector('#menu').classList.add('hidden');
     document.querySelector('#modal').classList.add('hidden');
     document.querySelector('#hud').classList.remove('hidden');
@@ -41,11 +44,13 @@ export class Game{
   }
 
   update(dt){
-    this.time+=dt;this.player.update(this);this.cam=clamp(this.player.x-320,0,this.level.length-1280);
-    for(const[type,start,count]of this.level.enemies){
+    this.time+=dt;
+    if(this.intro>0){this.intro-=dt;this.updateHud();return}
+    this.player.update(this);this.cam=clamp(this.player.x-320,0,this.level.length-1280);
+    for(const[type,start,count,spacing=120]of this.level.enemies){
       for(let n=0;n<count;n++){
-        const key=`${type}-${start}-${n}`,x=start+n*120;
-        if(!this.spawned.has(key)&&x<this.player.x+1000){
+        const key=`${type}-${start}-${n}`,x=start+n*spacing;
+        if(!this.spawned.has(key)&&x<this.player.x+(this.level.spawnAhead||1000)){
           this.spawned.add(key);const e=new Enemy(type,x);e.hp*=this.mult;e.max=e.hp;this.enemies.push(e);
         }
       }
@@ -58,6 +63,12 @@ export class Game{
     this.bullets=this.bullets.filter(b=>b.life>0&&b.y<680);
     this.particles.forEach(p=>p.update());this.particles=this.particles.filter(p=>p.life>0);
     this.spriteFx.forEach(f=>f.life--);this.spriteFx=this.spriteFx.filter(f=>f.life>0);
+    if(this.boss){
+      this.boss.anim+=dt;
+      if(this.boss.hit>0)this.boss.hit-=dt;
+      if(this.boss.attack>0)this.boss.attack-=dt;
+      if(this.boss.dead){this.boss.death-=dt;if(this.boss.death<=0)this.victory()}
+    }
     this.hostages.forEach(h=>{
       if(h.celebrate>0)h.celebrate--;
       if(!h.rescued&&Math.abs(this.player.x-h.x)<50){
@@ -83,27 +94,56 @@ export class Game{
   resolveCollisions(){
     for(const b of this.bullets){
       if(b.team==='player'||b.team==='grenade'){
+        for(const d of this.destructibles){
+          if(b.life<=0||d.dead)continue;
+          const size=d.type==='crate'?42:32;
+          if(Math.abs(b.x-d.x)<size&&Math.abs(b.y-(d.y-42))<52){
+            d.hp-=b.damage;b.life=0;this.burst(b.x,b.y,b.color,3);
+            if(d.hp<=0)this.breakProp(d);
+          }
+        }
         for(const e of this.enemies){
+          if(b.life<=0)break;
           if(!e.dead&&Math.abs(b.x-e.x)<e.w/2+12&&Math.abs(b.y-(e.y-e.h/2))<e.h/2+15){
             e.hp-=b.damage;e.hit=8;b.life=0;this.burst(b.x,b.y,b.color,3);
             if(e.hp<=0)this.kill(e);
           }
         }
-        if(this.boss&&Math.abs(b.x-this.boss.x)<90&&Math.abs(b.y-(this.boss.y-70))<80){
-          this.boss.hp-=b.damage;b.life=0;this.burst(b.x,b.y,'#ff712e',4);
-          if(this.boss.hp<=0)this.victory();
+        if(this.boss&&!this.boss.dead&&b.life>0&&Math.abs(b.x-this.boss.x)<185&&Math.abs(b.y-(this.boss.y-95))<105){
+          this.boss.hp-=b.damage;this.boss.hit=7;b.life=0;this.burst(b.x,b.y,'#ff712e',4);
+          if(this.boss.hp<=0){
+            this.boss.hp=0;this.boss.dead=true;this.boss.death=70;this.boss.attack=0;
+            this.burst(this.boss.x,this.boss.y-90,'#ff5a20',28);this.fx.boom();
+          }
         }
       }else if(b.team==='enemy'&&Math.abs(b.x-this.player.x)<26&&Math.abs(b.y-(this.player.y-30))<38){
         b.life=0;this.hurt(b.damage);
       }
     }
-    if(this.boss){
+    if(this.boss&&!this.boss.dead){
       this.boss.cool--;
       if(this.boss.cool<0){
-        this.boss.cool=28;
-        for(let a=-2;a<=2;a++)this.bullets.push(new Bullet(this.boss.x-70,this.boss.y-80,-6,a*1.15,'enemy',12*this.mult,'#ff6045','heavy'));
+        const enraged=this.boss.hp<this.boss.max*.5;
+        this.boss.cool=enraged?34:48;this.boss.attack=14;
+        const sx=this.boss.x-180,sy=this.boss.y-205;
+        const dx=this.player.x-sx,dy=(this.player.y-35)-sy,len=Math.hypot(dx,dy)||1,angle=Math.atan2(dy,dx);
+        for(const spread of[-.13,0,.13]){
+          const a=angle+spread,speed=enraged?7.4:6.6;
+          this.bullets.push(new Bullet(sx,sy,Math.cos(a)*speed,Math.sin(a)*speed,'enemy',12*this.mult,'#ff6045','heavy'));
+        }
       }
     }
+  }
+
+  breakProp(d){
+    d.dead=true;this.score+=150;this.coins+=3;this.fx.boom();
+    this.burst(d.x,d.y-38,d.type==='redBarrel'?'#ff542e':'#e9a348',d.type==='redBarrel'?22:10);
+    if(d.type==='redBarrel'){
+      for(const e of this.enemies){
+        if(!e.dead&&Math.abs(e.x-d.x)<155){e.hp-=85;e.hit=8;if(e.hp<=0)this.kill(e)}
+      }
+      if(Math.abs(this.player.x-d.x)<115)this.hurt(22);
+    }else if(Math.random()<.65)this.drop(d.x,d.y-35);
   }
 
   kill(e){
@@ -133,7 +173,7 @@ export class Game{
 
   spawnBoss(){
     this.enemies=[];const b=this.level.boss;
-    this.boss={x:b.x+380,y:555,hp:b.hp*this.mult,max:b.hp*this.mult,cool:40,name:b.name};
+    this.boss={x:b.x+340,y:555,hp:b.hp*this.mult,max:b.hp*this.mult,cool:55,name:b.name,anim:0,hit:0,attack:0,dead:false,death:0};
     this.player.x=Math.max(this.player.x,b.x);this.toast(`⚠ ALERTA ⚠<br>${b.name}`,2500);this.fx.boom();
   }
 
@@ -199,6 +239,12 @@ export class Game{
       }
     }
 
+    for(const d of this.destructibles){
+      if(d.dead)continue;
+      const x=d.x-cam;
+      if(x>-150&&x<1430)drawSceneryProp(c,d.type,x,d.y,d.scale,d.flip,this.time,(d.max-d.hp)/d.max);
+    }
+
     for(const p of this.pickups){
       p.life--;const x=p.x-cam;p.y=520+Math.sin(this.time*.08)*7;
       const col=pickupCols[p.type]??0;
@@ -213,9 +259,14 @@ export class Game{
     this.enemies.forEach(e=>e.draw(c,cam));
 
     if(this.boss){
-      const x=this.boss.x-cam;c.fillStyle='#491f2b';c.fillRect(x-85,405,170,150);
-      c.fillStyle='#7e3443';c.fillRect(x-60,360,120,70);c.fillStyle='#ffb128';c.fillRect(x-14,388,28,18);
-      c.fillStyle='#1b1820';c.fillRect(x-120,430,90,24);
+      const b=this.boss,x=b.x-cam,damaged=b.hp<b.max*.5;
+      let row=damaged?1:0,col=Math.floor(b.anim/10)%2;
+      if(b.hit>0){row=0;col=3}
+      if(b.attack>0){col=damaged?1:2}
+      if(b.dead){row=1;col=b.death>34?2:3}
+      if(!drawAtlas(c,'bossTrain',col,row,4,2,x-205,255,410,300)){
+        c.fillStyle='#7e3443';c.fillRect(x-105,385,210,170);
+      }
     }
     this.bullets.forEach(b=>b.draw(c,cam));this.particles.forEach(p=>p.draw(c,cam));
     this.spriteFx.forEach(f=>{

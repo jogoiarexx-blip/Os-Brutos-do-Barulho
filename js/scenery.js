@@ -24,7 +24,7 @@ function repeatImage(c,img,offset,y,w,h){
   return true;
 }
 
-function drawProp(c,type,x,y,scale=1,flip=false,time=0){
+export function drawSceneryProp(c,type,x,y,scale=1,flip=false,time=0,damage=0){
   const spec=propCells[type];
   if(!spec||!loaded(port.props))return;
   const [col,row,w,h]=spec,sw=port.props.naturalWidth/4,sh=port.props.naturalHeight/3;
@@ -35,6 +35,11 @@ function drawProp(c,type,x,y,scale=1,flip=false,time=0){
     const glow=c.createRadialGradient(0,-42,5,0,-42,72);
     glow.addColorStop(0,'#ffb22e70');glow.addColorStop(1,'#ff5a1200');
     c.globalCompositeOperation='screen';c.fillStyle=glow;c.beginPath();c.arc(0,-42,72,0,Math.PI*2);c.fill();
+  }
+  if(damage>0){
+    c.strokeStyle=`rgba(255,170,80,${Math.min(.9,.3+damage*.55)})`;c.lineWidth=2/scale;
+    c.beginPath();c.moveTo(-w*.2,-h*.72);c.lineTo(0,-h*.52);c.lineTo(-w*.08,-h*.32);
+    c.moveTo(w*.2,-h*.62);c.lineTo(w*.04,-h*.45);c.lineTo(w*.16,-h*.2);c.stroke();
   }
   c.restore();
 }
@@ -60,7 +65,7 @@ export function drawLevelScenery(c,level,cam,time){
 
   for(const item of level.scenery||[]){
     const [type,worldX,scale=1,flip=false]=item,x=worldX-cam;
-    if(x>-180&&x<1460)drawProp(c,type,x,555,scale,flip,time);
+    if(x>-180&&x<1460)drawSceneryProp(c,type,x,555,scale,flip,time);
   }
 
   c.fillStyle='#ffb02b';
