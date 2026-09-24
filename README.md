@@ -15,6 +15,8 @@ Depois acesse a pasta do projeto pelo endereço exibido no servidor local.
 - Progresso individual por personagem, visuais próprios e vantagens exclusivas
 - Duas sprite sheets WebP por personagem: locomoção (30 quadros) e armas (25 quadros)
 - Quadros recortados e centralizados individualmente, com margem segura e pés alinhados
+- Atlas animado com 6 classes de inimigos: soldado, metralhador, drone, escudeiro, mutante e elite
+- Sprites para jipe, tanque, mecha, refém, caixas de armas, vida, projéteis, granada e explosões
 - Caminhada, corrida com Shift, pulo em etapas, agachar, dano, queda, levantar e vitória
 - Rifle, metralhadora, escopeta, laser e lança-foguetes em pé e agachado
 - Espelhamento em tempo real para olhar à esquerda sem duplicar imagens

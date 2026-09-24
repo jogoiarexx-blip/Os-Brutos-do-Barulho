@@ -1,4 +1,5 @@
 import {Player,clamp} from './entities.js';
+import {drawAtlas,vehicleRows} from './sprites.js';
 
 export const ROSTER=[
   {id:'brutus',name:'BRUTUS',title:'O TANQUE DA TURMA',color:'#2d8b78',accent:'#f0bb3d',perk:'+30 de vida',tier:1},
@@ -93,6 +94,11 @@ Player.prototype.draw=function(c,cam){
   c.translate(x,y);
   c.scale(this.dir,1);
   if(this.vehicle){
+    const row=vehicleRows[this.vehicle]??0;
+    const col=this.cool>0?2:Math.floor(this.animTime/10)%2;
+    const sizes={jip:[150,94],tank:[170,112],mecha:[142,150]};
+    const [vw,vh]=sizes[this.vehicle]||sizes.jip;
+    if(drawAtlas(c,'support',col,row,4,4,-vw/2,-vh+8,vw,vh)){c.restore();return}
     c.fillStyle=this.vehicle==='tank'?'#52694a':'#58616b';c.fillRect(-48,-35,96,38);
     c.fillStyle='#15191e';c.beginPath();c.arc(-29,3,18,0,7);c.arc(29,3,18,0,7);c.fill();
   }
