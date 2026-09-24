@@ -17,9 +17,10 @@ export class Game{
     this.destructibles=(level.destructibles||[]).map(([type,x,scale=1,flip=false])=>({
       type,x,y:555,scale,flip,hp:type==='crate'?42:34,max:type==='crate'?42:34,dead:false
     }));
+    this.outpost=level.outpost?{...level.outpost,y:555,max:level.outpost.hp,dead:false,death:0,hit:0,attack:0,cool:55,anim:0}:null;
     this.hostages=level.hostages.map(x=>({x,y:555,rescued:false,celebrate:0}));
     this.spawned=new Set;this.cam=0;this.score=0;this.coins=0;this.kills=0;
-    this.currentObjective=0;this.boss=null;this.vehicleTaken=false;this.checkpoint=0;
+    this.currentObjective=0;this.boss=null;this.vehicleTaken=false;this.checkpoint=0;this.gateToast=0;
     this.time=0;this.intro=96;this.running=true;this.paused=false;this.last=performance.now();
     document.querySelector('#menu').classList.add('hidden');
     document.querySelector('#modal').classList.add('hidden');
@@ -47,6 +48,24 @@ export class Game{
     this.time+=dt;
     if(this.intro>0){this.intro-=dt;this.updateHud();return}
     this.player.update(this);this.cam=clamp(this.player.x-320,0,this.level.length-1280);
+    if(this.outpost&&!this.outpost.dead){
+      this.player.x=Math.min(this.player.x,this.outpost.x-185);
+      this.outpost.anim+=dt;if(this.outpost.hit>0)this.outpost.hit-=dt;if(this.outpost.attack>0)this.outpost.attack-=dt;
+      const distance=this.player.x-this.outpost.x;
+      this.outpost.cool-=dt;
+      if(this.outpost.cool<=0&&Math.abs(distance)<760){
+        this.outpost.cool=58+Math.random()*30;this.outpost.attack=12;
+        const sx=this.outpost.x-120,sy=397,dx=this.player.x-sx,dy=(this.player.y-35)-sy,len=Math.hypot(dx,dy)||1;
+        this.bullets.push(new Bullet(sx,sy,dx/len*6.2,dy/len*6.2,'enemy',11*this.mult,'#ff6045','heavy'));
+      }
+    }
+    if(this.currentObjective<2&&this.player.x>this.level.boss.x-430){
+      this.player.x=this.level.boss.x-430;
+      if(this.gateToast<=0){const missing=3-this.hostages.filter(h=>h.rescued).length;this.toast(`PORTÃO TRAVADO · FALTAM ${missing} PRISIONEIRO${missing===1?'':'S'}`);this.gateToast=100}
+    }
+    if(this.gateToast>0)this.gateToast-=dt;
+    if(this.boss&&!this.boss.dead){this.player.x=clamp(this.player.x,this.level.boss.x-360,this.level.length-80)}
+    this.cam=clamp(this.player.x-320,0,this.level.length-1280);
     for(const[type,start,count,spacing=120]of this.level.enemies){
       for(let n=0;n<count;n++){
         const key=`${type}-${start}-${n}`,x=start+n*spacing;
@@ -55,7 +74,7 @@ export class Game{
         }
       }
     }
-    if(!this.boss&&this.player.x>this.level.boss.x)this.spawnBoss();
+    if(!this.boss&&this.currentObjective>=2&&this.player.x>this.level.boss.x-360)this.spawnBoss();
     this.enemies.forEach(e=>e.update(this));
     this.bullets.forEach(b=>{b.update();if(b.team==='grenade')b.vy+=.35});
     this.resolveCollisions();
@@ -65,6 +84,7 @@ export class Game{
     this.spriteFx.forEach(f=>f.life--);this.spriteFx=this.spriteFx.filter(f=>f.life>0);
     if(this.boss){
       this.boss.anim+=dt;
+      if(this.boss.entrance>0){this.boss.entrance-=dt;this.boss.x=Math.max(this.boss.targetX,this.boss.x-5.5*dt)}
       if(this.boss.hit>0)this.boss.hit-=dt;
       if(this.boss.attack>0)this.boss.attack-=dt;
       if(this.boss.dead){this.boss.death-=dt;if(this.boss.death<=0)this.victory()}
@@ -74,6 +94,7 @@ export class Game{
       if(!h.rescued&&Math.abs(this.player.x-h.x)<50){
         h.rescued=true;h.celebrate=55;this.score+=1000;this.coins+=25;this.fx.coin();
         this.toast('PRISIONEIRO RESGATADO +1000');
+        if(this.level.id===1&&this.hostages.filter(x=>x.rescued).length>=3&&this.currentObjective===1)this.completeObjective(1,'TODOS OS PRISIONEIROS FORAM SALVOS');
       }
     });
     if(!this.vehicleTaken&&this.level.vehicle&&Math.abs(this.player.x-this.level.vehicle.x)<65){
@@ -86,14 +107,24 @@ export class Game{
         this.checkpoint=x;this.toast('CHECKPOINT');this.saveData.lastMission=this.level.id;this.saveData.checkpoint=x;
       }
     });
-    const ob=this.level.objectives[this.currentObjective];
-    if(ob&&this.player.x>ob.x){this.currentObjective++;this.toast('OBJETIVO ATUALIZADO')}
+    if(!this.outpost){
+      const ob=this.level.objectives[this.currentObjective];
+      if(ob&&Number.isFinite(ob.x)&&this.player.x>ob.x){this.currentObjective++;this.toast('OBJETIVO ATUALIZADO')}
+    }
     this.updateHud();
   }
 
   resolveCollisions(){
     for(const b of this.bullets){
       if(b.team==='player'||b.team==='grenade'){
+        if(this.outpost&&!this.outpost.dead&&b.life>0&&Math.abs(b.x-this.outpost.x)<175&&Math.abs(b.y-420)<150){
+          this.outpost.hp-=b.damage;this.outpost.hit=7;b.life=0;this.burst(b.x,b.y,b.color,4);
+          if(this.outpost.hp<=0){
+            this.outpost.hp=0;this.outpost.dead=true;this.outpost.death=62;this.score+=1800;this.coins+=35;
+            this.burst(this.outpost.x,this.outpost.y-105,'#ff672d',34);this.fx.boom();
+            this.completeObjective(0,'POSTO AVANÇADO DESTRUÍDO');
+          }
+        }
         for(const d of this.destructibles){
           if(b.life<=0||d.dead)continue;
           const size=d.type==='crate'?42:32;
@@ -113,6 +144,7 @@ export class Game{
           this.boss.hp-=b.damage;this.boss.hit=7;b.life=0;this.burst(b.x,b.y,'#ff712e',4);
           if(this.boss.hp<=0){
             this.boss.hp=0;this.boss.dead=true;this.boss.death=70;this.boss.attack=0;
+            if(this.level.id===1)this.completeObjective(2,'COLOSSO FERROVIÁRIO DESTRUÍDO');
             this.burst(this.boss.x,this.boss.y-90,'#ff5a20',28);this.fx.boom();
           }
         }
@@ -120,7 +152,7 @@ export class Game{
         b.life=0;this.hurt(b.damage);
       }
     }
-    if(this.boss&&!this.boss.dead){
+    if(this.boss&&!this.boss.dead&&this.boss.entrance<=0){
       this.boss.cool--;
       if(this.boss.cool<0){
         const enraged=this.boss.hp<this.boss.max*.5;
@@ -138,6 +170,7 @@ export class Game{
   breakProp(d){
     d.dead=true;this.score+=150;this.coins+=3;this.fx.boom();
     this.burst(d.x,d.y-38,d.type==='redBarrel'?'#ff542e':'#e9a348',d.type==='redBarrel'?22:10);
+    for(let i=0;i<8;i++)this.particles.push(new Particle(d.x+(Math.random()-.5)*30,d.y-45,i%2?'#5c3b28':'#b77a3c',1.7));
     if(d.type==='redBarrel'){
       for(const e of this.enemies){
         if(!e.dead&&Math.abs(e.x-d.x)<155){e.hp-=85;e.hit=8;if(e.hp<=0)this.kill(e)}
@@ -173,8 +206,13 @@ export class Game{
 
   spawnBoss(){
     this.enemies=[];const b=this.level.boss;
-    this.boss={x:b.x+340,y:555,hp:b.hp*this.mult,max:b.hp*this.mult,cool:55,name:b.name,anim:0,hit:0,attack:0,dead:false,death:0};
-    this.player.x=Math.max(this.player.x,b.x);this.toast(`⚠ ALERTA ⚠<br>${b.name}`,2500);this.fx.boom();
+    this.boss={x:b.x+780,targetX:b.x+330,y:555,hp:b.hp*this.mult,max:b.hp*this.mult,cool:55,name:b.name,anim:0,hit:0,attack:0,dead:false,death:0,entrance:82};
+    this.player.x=Math.max(this.player.x,b.x-330);this.toast(`⚠ ARENA BLOQUEADA ⚠<br>${b.name} ESTÁ CHEGANDO`,2500);this.fx.boom();
+  }
+
+  completeObjective(index,message){
+    if(this.currentObjective!==index)return;
+    this.currentObjective=index+1;this.score+=500;this.toast(`${message}<br><small>OBJETIVO CONCLUÍDO</small>`,1800);
   }
 
   burst(x,y,c,n){
@@ -203,7 +241,9 @@ export class Game{
     document.querySelector('#hpBar').style.width=`${Math.max(0,this.player.hp/this.player.maxHp*100)}%`;
     document.querySelector('#weapon').textContent=`${this.player.weapon.toUpperCase()} · ${this.player.ammo===Infinity?'∞':this.player.ammo}`;
     document.querySelector('#mission').textContent=`MISSÃO ${this.level.id} · ${this.level.name}`;
-    document.querySelector('#objective').textContent=this.level.objectives[this.currentObjective]?.text||'ELIMINE O CHEFE';
+    let objective=this.level.objectives[this.currentObjective]?.text||'MISSÃO CONCLUÍDA';
+    if(this.currentObjective===1)objective+=` · ${this.hostages.filter(h=>h.rescued).length}/3`;
+    document.querySelector('#objective').textContent=objective;
     document.querySelector('#score').textContent=String(Math.floor(this.score)).padStart(6,'0');
     document.querySelector('#grenades').textContent=`GRANADAS ×${this.player.grenades}`;
     const bh=document.querySelector('#bossHud');bh.classList.toggle('hidden',!this.boss);
@@ -229,6 +269,23 @@ export class Game{
         c.fillStyle='#d7b38f';c.fillRect(x-9,493,18,18);c.fillStyle='#eee';c.fillRect(x-14,511,28,44);
       }
     });
+
+    // Bandeiras deixam o retorno ao checkpoint legível durante o combate.
+    for(const cp of this.level.checkpoints){
+      const x=cp-cam;if(x<-80||x>1360)continue;
+      const active=this.checkpoint>=cp;c.fillStyle='#242b31';c.fillRect(x-4,430,8,125);
+      c.fillStyle=active?'#5dff9b':'#ffcf47';c.beginPath();c.moveTo(x,438);c.lineTo(x+52,454);c.lineTo(x,474);c.fill();
+      if(active){c.fillStyle='#5dff9b55';c.beginPath();c.arc(x,500,48+Math.sin(this.time*.08)*4,0,7);c.fill()}
+    }
+
+    if(this.outpost){
+      const o=this.outpost,x=o.x-cam;let row=0,col=Math.floor(o.anim/12)%2;
+      if(o.attack>0)col=1;if(o.hit>0)col=2;
+      if(!o.dead&&o.hp<o.max*.45)col=3;
+      if(o.dead){row=1;col=o.death>42?0:o.death>24?1:o.death>8?2:3;if(o.death>0)o.death--}
+      drawAtlas(c,'outpost',col,row,4,2,x-205,248,410,307);
+      if(!o.dead){c.fillStyle='#101317';c.fillRect(x-115,226,230,13);c.fillStyle='#ff5b3f';c.fillRect(x-112,229,224*Math.max(0,o.hp/o.max),7)}
+    }
 
     if(this.level.vehicle&&!this.vehicleTaken){
       const x=this.level.vehicle.x-cam,type=this.level.vehicle.type,row=vehicleRows[type]??0;
@@ -274,6 +331,16 @@ export class Game{
       drawAtlas(c,'effects',col,1,5,5,f.x-cam-50,f.y-50,100,100);
     });
     this.player.draw(c,cam);
+    if(this.boss&&!this.boss.dead){
+      const gx=this.level.boss.x-380-cam;c.fillStyle='#242b31';c.fillRect(gx-12,402,24,153);c.fillRect(1260,402,20,153);
+      c.fillStyle='#ffcc31';for(let y=414;y<548;y+=28){c.save();c.translate(gx,y);c.rotate(-.55);c.fillRect(-18,-5,36,10);c.restore()}
+    }
+    if(this.intro>0){
+      c.fillStyle=`rgba(0,0,0,${Math.min(.55,this.intro/90)})`;c.fillRect(0,0,1280,720);
+      c.textAlign='center';c.fillStyle='#ffd348';c.font='25px Black Ops One';c.fillText('MISSÃO 1',640,286);
+      c.fillStyle='white';c.font='52px Black Ops One';c.fillText(this.level.name,640,345);
+      c.font='21px Rajdhani';c.fillText('A Legião Ferro fechou o porto. Abra caminho e tire todo mundo de lá!',640,387);
+    }
     if(this.player.combo>1){c.fillStyle='#ffe048';c.font='34px Black Ops One';c.textAlign='left';c.fillText(`${this.player.combo}× COMBO`,30,150)}
   }
 }

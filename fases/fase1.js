@@ -2,10 +2,11 @@ export default {
   id:1,name:'PORTO EM CHAMAS',subtitle:'Rompa o bloqueio da Legião Ferro',length:7200,
   sky:['#15283d','#d06d3d'],ground:'#302b28',unlock:0,
   spawnAhead:720,
-  objectives:[{x:900,text:'Destrua o posto avançado'},{x:3000,text:'Resgate 3 prisioneiros'},{x:5600,text:'Derrote o Trem Blindado'}],
+  objectives:[{text:'Destrua o posto avançado'},{text:'Resgate 3 prisioneiros'},{text:'Derrote o Trem Blindado'}],
   checkpoints:[1800,4100],
+  outpost:{x:1120,hp:360,name:'POSTO DA LEGIAO'},
   enemies:[['grunt',650,5,170],['gunner',1450,3,220],['drone',2050,4,230],['shield',2850,3,260],['grunt',3650,7,180],['gunner',4900,5,210]],
-  hostages:[2200,2800,3700],vehicle:{x:4300,type:'jip'},boss:{x:6500,type:'train',name:'COLOSSO FERROVIÁRIO',hp:850},weather:'embers',
+  hostages:[2200,2800,3700],vehicle:{x:4300,type:'jip'},boss:{x:6380,type:'train',name:'COLOSSO FERROVIÁRIO',hp:850},weather:'embers',
   scenery:[
     ['bollard',240,.8],['sandbags',970,.82,true],
     ['lamp',1280,.8],['fence',1510,.86],['scrap',1960,.72],

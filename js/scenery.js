@@ -63,6 +63,18 @@ export function drawLevelScenery(c,level,cam,time){
     c.fillStyle=level.ground;c.fillRect(0,555,1280,165);
   }
 
+  // O trecho final é uma ferrovia de verdade, não apenas um piso genérico.
+  if(level.boss){
+    const railStart=level.boss.x-420-cam;
+    if(railStart<1280){
+      c.fillStyle='#171b1f';c.fillRect(Math.max(0,railStart),602,1280-Math.max(0,railStart),14);
+      c.fillStyle='#87909a';c.fillRect(Math.max(0,railStart),599,1280-Math.max(0,railStart),4);
+      c.fillRect(Math.max(0,railStart),642,1280-Math.max(0,railStart),4);
+      c.fillStyle='#49372c';
+      for(let x=railStart-(railStart%54);x<1320;x+=54)c.fillRect(x,592,14,66);
+    }
+  }
+
   for(const item of level.scenery||[]){
     const [type,worldX,scale=1,flip=false]=item,x=worldX-cam;
     if(x>-180&&x<1460)drawSceneryProp(c,type,x,555,scale,flip,time);

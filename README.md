@@ -19,6 +19,9 @@ Depois acesse a pasta do projeto pelo endereço exibido no servidor local.
 - Sprites para jipe, tanque, mecha, refém, caixas de armas, vida, projéteis, granada e explosões
 - Fase 1 com cenário próprio em WebP: porto em chamas, parallax, piso industrial e 12 tipos de objetos ambientais
 - Chefe Colosso Ferroviário com 8 quadros, duas fases de combate, dano, explosão e carcaça
+- Objetivos reais na fase 1: posto avançado com vida e torre, três resgates obrigatórios e arena final bloqueada
+- Posto avançado com atlas próprio de 8 quadros, checkpoints com bandeiras, trilhos e destroços físicos
+- Entrada cinematográfica do trem e teste automatizado do fluxo completo da primeira fase
 - Caixas e barris destrutíveis; barris vermelhos causam dano em área e caixas podem liberar armas ou vida
 - Introdução protegida, ondas iniciais menores e disparos do chefe apontados para a posição do jogador
 - Caminhada, corrida com Shift, pulo em etapas, agachar, dano, queda, levantar e vitória
@@ -36,7 +39,8 @@ Depois acesse a pasta do projeto pelo endereço exibido no servidor local.
 - W, seta para cima ou Espaço: pular
 - Z/J: disparar
 - X/K: granada
-- C/Shift: esquiva
+- Shift: correr
+- C: esquiva
 - Esc/Start: pausa
 
 Os 20 arquivos de fases ficam em `fases/`; interface em `ui/`; motor modular em `js/`; recursos em `assets/`.

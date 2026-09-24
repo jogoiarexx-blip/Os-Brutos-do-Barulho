@@ -1,12 +1,13 @@
 const makeImage=()=>typeof Image!=='undefined'?new Image():{complete:false,naturalWidth:0,naturalHeight:0};
 
-export const atlases={enemies:makeImage(),support:makeImage(),effects:makeImage(),bossTrain:makeImage()};
+export const atlases={enemies:makeImage(),support:makeImage(),effects:makeImage(),bossTrain:makeImage(),outpost:makeImage()};
 
 if(typeof Image!=='undefined'){
   atlases.enemies.src='assets/enemies/legion-atlas.webp';
   atlases.support.src='assets/support/vehicles-hostage-atlas.webp';
   atlases.effects.src='assets/effects/combat-items-atlas.webp';
   atlases.bossTrain.src='assets/bosses/train-colossus-atlas.webp';
+  atlases.outpost.src='assets/structures/harbor-outpost-atlas.webp';
 }
 
 export function drawAtlas(ctx,name,col,row,cols,rows,x,y,w,h){
