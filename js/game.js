@@ -1,5 +1,6 @@
 import {Player,Enemy,Bullet,Particle,clamp} from './entities.js';
 import {drawAtlas,vehicleRows,pickupCols} from './sprites.js';
+import {drawLevelScenery} from './scenery.js';
 
 export class Game{
   constructor(canvas,input,fx,saveData,onEnd){
@@ -171,13 +172,15 @@ export class Game{
 
   draw(){
     const c=this.ctx,l=this.level,cam=this.cam,g=c.createLinearGradient(0,0,0,600);
-    g.addColorStop(0,l.sky[0]);g.addColorStop(1,l.sky[1]);c.fillStyle=g;c.fillRect(0,0,1280,720);
-    c.fillStyle='#ffffff12';
-    for(let i=0;i<20;i++){const x=((i*173-cam*.15)%1500+1500)%1500;c.beginPath();c.arc(x,100+(i*47)%300,40+(i%4)*25,0,7);c.fill()}
-    c.fillStyle='#0c1218aa';
-    for(let i=0;i<30;i++){const x=i*180-(cam*.45%180),h=90+(i*53)%210;c.fillRect(x,555-h,130,h)}
-    c.fillStyle=l.ground;c.fillRect(0,555,1280,165);c.fillStyle='#ffffff0d';
-    for(let x=-(cam%90);x<1280;x+=90)c.fillRect(x,600,55,8);
+    if(!drawLevelScenery(c,l,cam,this.time)){
+      g.addColorStop(0,l.sky[0]);g.addColorStop(1,l.sky[1]);c.fillStyle=g;c.fillRect(0,0,1280,720);
+      c.fillStyle='#ffffff12';
+      for(let i=0;i<20;i++){const x=((i*173-cam*.15)%1500+1500)%1500;c.beginPath();c.arc(x,100+(i*47)%300,40+(i%4)*25,0,7);c.fill()}
+      c.fillStyle='#0c1218aa';
+      for(let i=0;i<30;i++){const x=i*180-(cam*.45%180),h=90+(i*53)%210;c.fillRect(x,555-h,130,h)}
+      c.fillStyle=l.ground;c.fillRect(0,555,1280,165);c.fillStyle='#ffffff0d';
+      for(let x=-(cam%90);x<1280;x+=90)c.fillRect(x,600,55,8);
+    }
 
     this.hostages.forEach(h=>{
       if(h.rescued&&h.celebrate<=0)return;
