@@ -1,12 +1,17 @@
 const makeImage=()=>typeof Image!=='undefined'?new Image():{complete:false,naturalWidth:0,naturalHeight:0};
 
 const port={backdrop:makeImage(),midground:makeImage(),ground:makeImage(),props:makeImage()};
+const jungle={backdrop:makeImage(),midground:makeImage(),ground:makeImage(),props:makeImage()};
 
 if(typeof Image!=='undefined'){
   port.backdrop.src='assets/levels/port-fire/backdrop.webp';
   port.midground.src='assets/levels/port-fire/midground.webp';
   port.ground.src='assets/levels/port-fire/ground.webp';
   port.props.src='assets/levels/port-fire/props-atlas.webp';
+  jungle.backdrop.src='assets/levels/jungle-storm/backdrop.webp';
+  jungle.midground.src='assets/levels/jungle-storm/midground.webp';
+  jungle.ground.src='assets/levels/jungle-storm/ground.webp';
+  jungle.props.src='assets/levels/jungle-storm/props-atlas.webp';
 }
 
 const propCells={
@@ -14,6 +19,7 @@ const propCells={
   lamp:[0,1,68,172],fence:[1,1,138,112],anchor:[2,1,112,94],pallet:[3,1,118,82],
   fire:[0,2,98,88],barrier:[1,2,124,72],bollard:[2,2,76,72],scrap:[3,2,128,86]
 };
+const jungleCells={gateClosed:[0,1,190,150],gateOpen:[1,1,190,150],checkpoint:[2,1,110,155],bridge:[3,1,230,130],fern:[0,2,150,105],barrier:[1,2,150,94],generator:[2,2,155,110],crates:[3,2,145,104]};
 
 function loaded(img){return img.complete&&img.naturalWidth>0}
 
@@ -44,7 +50,27 @@ export function drawSceneryProp(c,type,x,y,scale=1,flip=false,time=0,damage=0){
   c.restore();
 }
 
+export function drawJungleProp(c,type,x,y,scale=1,flip=false,time=0){
+  const spec=jungleCells[type];if(!spec||!loaded(jungle.props))return;
+  const [col,row,w,h]=spec,sw=jungle.props.naturalWidth/4,sh=jungle.props.naturalHeight/3;
+  const pulse=type==='checkpoint'?1+Math.sin(time*.12)*.035:1;
+  c.save();c.translate(x,y);c.scale((flip?-1:1)*scale*pulse,scale/pulse);
+  c.drawImage(jungle.props,col*sw,row*sh,sw,sh,-w/2,-h,w,h);c.restore();
+}
+
 export function drawLevelScenery(c,level,cam,time){
+  if(level.id===2){
+    c.fillStyle='#071a1c';c.fillRect(0,0,1280,720);
+    repeatImage(c,jungle.backdrop,cam*.055,0,1525,555);
+    repeatImage(c,jungle.midground,cam*.22,242,1500,315);
+    const mist=c.createLinearGradient(0,300,0,570);mist.addColorStop(0,'#49d9d000');mist.addColorStop(1,'#49d9d022');c.fillStyle=mist;c.fillRect(0,300,1280,270);
+    if(!repeatImage(c,jungle.ground,cam,555,495,165)){c.fillStyle=level.ground;c.fillRect(0,555,1280,165)}
+    for(const item of level.scenery||[]){const[type,worldX,scale=1,flip=false]=item,x=worldX-cam;if(x>-220&&x<1500)drawJungleProp(c,type,x,555,scale,flip,time)}
+    c.strokeStyle='#a8efff55';c.lineWidth=2;
+    for(let i=0;i<42;i++){const x=((i*83-cam*.12+time*9)%1450+1450)%1450,y=(i*47+time*15)%610;c.beginPath();c.moveTo(x,y);c.lineTo(x-9,y+25);c.stroke()}
+    if(Math.floor(time/170)%4===1&&time%170<8){c.fillStyle='#d9ffff28';c.fillRect(0,0,1280,555)}
+    return true;
+  }
   if(level.id!==1)return false;
 
   c.fillStyle='#14273b';c.fillRect(0,0,1280,720);

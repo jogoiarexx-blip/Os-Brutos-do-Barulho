@@ -41,6 +41,7 @@ export class Enemy{
     if(Math.abs(dx)>260)this.x+=this.dir*this.speed;
     this.cool--;if(this.cool<0&&Math.abs(dx)<600){this.cool=70+Math.random()*80;this.attack=14;g.enemyShoot(this)}
     if(Math.abs(dx)<45&&Math.abs(g.player.y-this.y)<60)g.hurt(this.damage);
+    if(g.ally?.active&&!g.ally.complete&&!g.ally.dead&&Math.abs(this.x-g.ally.x)<45&&Math.abs(g.ally.y-this.y)<60)g.hurtAlly(this.damage);
   }
   draw(c,cam){
     const x=this.x-cam,y=this.y,row=enemyRows[this.type]??0;

@@ -1,6 +1,6 @@
 import {Player,Enemy,Bullet,Particle,clamp} from './entities.js';
 import {drawAtlas,vehicleRows,pickupCols} from './sprites.js';
-import {drawLevelScenery,drawSceneryProp} from './scenery.js';
+import {drawLevelScenery,drawSceneryProp,drawJungleProp} from './scenery.js';
 
 export class Game{
   constructor(canvas,input,fx,saveData,onEnd){
@@ -18,6 +18,8 @@ export class Game{
       type,x,y:555,scale,flip,hp:type==='crate'?42:34,max:type==='crate'?42:34,dead:false
     }));
     this.outpost=level.outpost?{...level.outpost,y:555,max:level.outpost.hp,dead:false,death:0,hit:0,attack:0,cool:55,anim:0}:null;
+    this.radios=(level.radios||[]).map(r=>({...r,y:555,max:r.hp,dead:false,hit:0,anim:0}));
+    this.ally=level.ally?{...level.ally,x:level.ally.start,y:555,max:level.ally.hp,active:false,complete:false,dead:false,inv:0,anim:0,dir:1}:null;
     this.hostages=level.hostages.map(x=>({x,y:555,rescued:false,celebrate:0}));
     this.spawned=new Set;this.cam=0;this.score=0;this.coins=0;this.kills=0;
     this.currentObjective=0;this.boss=null;this.vehicleTaken=false;this.checkpoint=0;this.gateToast=0;
@@ -59,9 +61,24 @@ export class Game{
         this.bullets.push(new Bullet(sx,sy,dx/len*6.2,dy/len*6.2,'enemy',11*this.mult,'#ff6045','heavy'));
       }
     }
+    if(this.radios.length&&this.currentObjective===0)this.player.x=Math.min(this.player.x,this.level.radioGate||3100);
+    if(this.ally&&this.currentObjective===1){
+      if(!this.ally.active&&this.player.x>this.ally.start-160){this.ally.active=true;this.toast(`${this.ally.name}: NÃO ME DEIXA PRA TRÁS!`,1800)}
+      if(this.ally.active&&!this.ally.dead){
+        this.ally.anim+=dt;if(this.ally.inv>0)this.ally.inv-=dt;
+        const target=Math.min(this.player.x-105,this.ally.end),dx=target-this.ally.x;
+        if(Math.abs(dx)>8){this.ally.dir=Math.sign(dx);this.ally.x+=this.ally.dir*Math.min(2.55*dt,Math.abs(dx))}else this.ally.x=target;
+        this.player.x=Math.min(this.player.x,this.ally.x+390);
+        if(this.ally.x>=this.ally.end-5){this.ally.complete=true;this.completeObjective(1,`${this.ally.name} CHEGOU AO LABORATÓRIO`)}
+      }
+    }
     if(this.currentObjective<2&&this.player.x>this.level.boss.x-430){
       this.player.x=this.level.boss.x-430;
-      if(this.gateToast<=0){const missing=3-this.hostages.filter(h=>h.rescued).length;this.toast(`PORTÃO TRAVADO · FALTAM ${missing} PRISIONEIRO${missing===1?'':'S'}`);this.gateToast=100}
+      if(this.gateToast<=0){
+        if(this.level.id===1){const missing=3-this.hostages.filter(h=>h.rescued).length;this.toast(`PORTÃO TRAVADO · FALTAM ${missing} PRISIONEIRO${missing===1?'':'S'}`)}
+        else this.toast('PORTÃO TRAVADO · CONCLUA O OBJETIVO');
+        this.gateToast=100;
+      }
     }
     if(this.gateToast>0)this.gateToast-=dt;
     if(this.boss&&!this.boss.dead){this.player.x=clamp(this.player.x,this.level.boss.x-360,this.level.length-80)}
@@ -125,6 +142,16 @@ export class Game{
             this.completeObjective(0,'POSTO AVANÇADO DESTRUÍDO');
           }
         }
+        for(const radio of this.radios){
+          if(b.life<=0||radio.dead)continue;
+          if(Math.abs(b.x-radio.x)<92&&Math.abs(b.y-410)<155){
+            radio.hp-=b.damage;radio.hit=7;b.life=0;this.burst(b.x,b.y,'#65f4ff',5);
+            if(radio.hp<=0){
+              radio.hp=0;radio.dead=true;this.score+=700;this.coins+=12;this.burst(radio.x,radio.y-115,'#63efff',22);this.fx.boom();
+              if(this.radios.every(r=>r.dead))this.completeObjective(0,'SINAL DA LEGIÃO CORTADO');
+            }
+          }
+        }
         for(const d of this.destructibles){
           if(b.life<=0||d.dead)continue;
           const size=d.type==='crate'?42:32;
@@ -145,12 +172,14 @@ export class Game{
           if(this.boss.hp<=0){
             this.boss.hp=0;this.boss.dead=true;this.boss.death=70;this.boss.attack=0;
             if(this.level.id===1)this.completeObjective(2,'COLOSSO FERROVIÁRIO DESTRUÍDO');
+            if(this.level.id===2)this.completeObjective(2,'MAMUTE ÔMEGA DESTRUÍDO');
             this.burst(this.boss.x,this.boss.y-90,'#ff5a20',28);this.fx.boom();
           }
         }
       }else if(b.team==='enemy'&&Math.abs(b.x-this.player.x)<26&&Math.abs(b.y-(this.player.y-30))<38){
         b.life=0;this.hurt(b.damage);
       }
+      if(b.team==='enemy'&&b.life>0&&this.ally?.active&&!this.ally.complete&&!this.ally.dead&&Math.abs(b.x-this.ally.x)<25&&Math.abs(b.y-(this.ally.y-32))<40){b.life=0;this.hurtAlly(b.damage)}
     }
     if(this.boss&&!this.boss.dead&&this.boss.entrance<=0){
       this.boss.cool--;
@@ -199,8 +228,18 @@ export class Game{
     }
   }
 
+  hurtAlly(amount){
+    if(!this.ally||this.ally.inv>0||this.ally.dead)return;
+    this.ally.hp-=amount;this.ally.inv=34;this.burst(this.ally.x,this.ally.y-35,'#66e8ff',6);
+    if(this.ally.hp<=0){
+      this.ally.hp=0;this.ally.dead=true;this.toast(`${this.ally.name} CAIU!`,1200);
+      setTimeout(()=>this.running&&this.fail(),700);
+    }
+  }
+
   enemyShoot(e){
-    const dx=this.player.x-e.x,dy=(this.player.y-35)-(e.y-35),d=Math.hypot(dx,dy)||1;
+    const target=this.ally?.active&&!this.ally.complete&&!this.ally.dead&&Math.abs(this.ally.x-e.x)<Math.abs(this.player.x-e.x)?this.ally:this.player;
+    const dx=target.x-e.x,dy=(target.y-35)-(e.y-35),d=Math.hypot(dx,dy)||1;
     this.bullets.push(new Bullet(e.x,e.y-40,dx/d*5,dy/d*5,'enemy',e.damage*this.mult,'#ff5545',e.type==='gunner'?'heavy':'rifle'));
   }
 
@@ -242,7 +281,9 @@ export class Game{
     document.querySelector('#weapon').textContent=`${this.player.weapon.toUpperCase()} · ${this.player.ammo===Infinity?'∞':this.player.ammo}`;
     document.querySelector('#mission').textContent=`MISSÃO ${this.level.id} · ${this.level.name}`;
     let objective=this.level.objectives[this.currentObjective]?.text||'MISSÃO CONCLUÍDA';
-    if(this.currentObjective===1)objective+=` · ${this.hostages.filter(h=>h.rescued).length}/3`;
+    if(this.level.id===1&&this.currentObjective===1)objective+=` · ${this.hostages.filter(h=>h.rescued).length}/3`;
+    if(this.level.id===2&&this.currentObjective===0)objective+=` · ${this.radios.filter(r=>r.dead).length}/3`;
+    if(this.level.id===2&&this.currentObjective===1&&this.ally)objective+=` · HP ${Math.max(0,Math.ceil(this.ally.hp))}`;
     document.querySelector('#objective').textContent=objective;
     document.querySelector('#score').textContent=String(Math.floor(this.score)).padStart(6,'0');
     document.querySelector('#grenades').textContent=`GRANADAS ×${this.player.grenades}`;
@@ -287,6 +328,23 @@ export class Game{
       if(!o.dead){c.fillStyle='#101317';c.fillRect(x-115,226,230,13);c.fillStyle='#ff5b3f';c.fillRect(x-112,229,224*Math.max(0,o.hp/o.max),7)}
     }
 
+    for(const radio of this.radios){
+      const x=radio.x-cam;if(x<-180||x>1460)continue;
+      if(radio.hit>0)radio.hit--;
+      const col=radio.dead?3:radio.hit>0?1:radio.hp<radio.max*.45?2:0;
+      drawAtlas(c,'jungleProps',col,0,4,3,x-112,305,224,250);
+      if(!radio.dead){c.fillStyle='#0b1518';c.fillRect(x-52,292,104,8);c.fillStyle='#4feeff';c.fillRect(x-50,294,100*Math.max(0,radio.hp/radio.max),4)}
+    }
+    if(this.level.id===2){
+      const gateWorld=this.currentObjective===0?this.level.radioGate:this.ally?.end;
+      if(Number.isFinite(gateWorld)){const open=this.currentObjective>=2;drawJungleProp(c,open?'gateOpen':'gateClosed',gateWorld-cam,555,.9,false,this.time)}
+    }
+    if(this.ally?.active&&!this.ally.complete&&!this.ally.dead){
+      const a=this.ally,x=a.x-cam;c.save();if(a.inv&&Math.floor(a.inv/3)%2)c.globalAlpha=.35;c.translate(x,a.y);c.scale(a.dir,1);
+      drawAtlas(c,'support',2+Math.floor(a.anim/10)%2,3,4,4,-43,-98,86,98);c.restore();
+      c.fillStyle='#111';c.fillRect(x-35,438,70,7);c.fillStyle='#55e7ff';c.fillRect(x-33,440,66*Math.max(0,a.hp/a.max),3);
+    }
+
     if(this.level.vehicle&&!this.vehicleTaken){
       const x=this.level.vehicle.x-cam,type=this.level.vehicle.type,row=vehicleRows[type]??0;
       const col=Math.floor(this.time/12)%2,sizes={jip:[150,94],tank:[170,112],mecha:[142,150]};
@@ -321,7 +379,8 @@ export class Game{
       if(b.hit>0){row=0;col=3}
       if(b.attack>0){col=damaged?1:2}
       if(b.dead){row=1;col=b.death>34?2:3}
-      if(!drawAtlas(c,'bossTrain',col,row,4,2,x-205,255,410,300)){
+      const bossAtlas=this.level.id===2?'bossMammoth':'bossTrain';
+      if(!drawAtlas(c,bossAtlas,col,row,4,2,x-205,255,410,300)){
         c.fillStyle='#7e3443';c.fillRect(x-105,385,210,170);
       }
     }
@@ -332,14 +391,15 @@ export class Game{
     });
     this.player.draw(c,cam);
     if(this.boss&&!this.boss.dead){
-      const gx=this.level.boss.x-380-cam;c.fillStyle='#242b31';c.fillRect(gx-12,402,24,153);c.fillRect(1260,402,20,153);
-      c.fillStyle='#ffcc31';for(let y=414;y<548;y+=28){c.save();c.translate(gx,y);c.rotate(-.55);c.fillRect(-18,-5,36,10);c.restore()}
+      const gx=this.level.boss.x-380-cam;
+      if(this.level.id===2)drawJungleProp(c,'gateClosed',gx,555,.78,false,this.time);
+      else{c.fillStyle='#242b31';c.fillRect(gx-12,402,24,153);c.fillRect(1260,402,20,153);c.fillStyle='#ffcc31';for(let y=414;y<548;y+=28){c.save();c.translate(gx,y);c.rotate(-.55);c.fillRect(-18,-5,36,10);c.restore()}}
     }
     if(this.intro>0){
       c.fillStyle=`rgba(0,0,0,${Math.min(.55,this.intro/90)})`;c.fillRect(0,0,1280,720);
-      c.textAlign='center';c.fillStyle='#ffd348';c.font='25px Black Ops One';c.fillText('MISSÃO 1',640,286);
+      c.textAlign='center';c.fillStyle='#ffd348';c.font='25px Black Ops One';c.fillText(`MISSÃO ${this.level.id}`,640,286);
       c.fillStyle='white';c.font='52px Black Ops One';c.fillText(this.level.name,640,345);
-      c.font='21px Rajdhani';c.fillText('A Legião Ferro fechou o porto. Abra caminho e tire todo mundo de lá!',640,387);
+      c.font='21px Rajdhani';c.fillText(this.level.id===2?'Derrube o sinal inimigo e leve o Dr. Trovão vivo até o laboratório!':'A Legião Ferro fechou o porto. Abra caminho e tire todo mundo de lá!',640,387);
     }
     if(this.player.combo>1){c.fillStyle='#ffe048';c.font='34px Black Ops One';c.textAlign='left';c.fillText(`${this.player.combo}× COMBO`,30,150)}
   }

@@ -22,6 +22,9 @@ Depois acesse a pasta do projeto pelo endereço exibido no servidor local.
 - Objetivos reais na fase 1: posto avançado com vida e torre, três resgates obrigatórios e arena final bloqueada
 - Posto avançado com atlas próprio de 8 quadros, checkpoints com bandeiras, trilhos e destroços físicos
 - Entrada cinematográfica do trem e teste automatizado do fluxo completo da primeira fase
+- Fase 2 completa com selva tempestuosa em parallax, chuva, relâmpagos e piso próprio
+- Três torres de rádio destrutíveis, escolta do Dr. Trovão com vida própria e portões por objetivo
+- Mamute Ômega com atlas exclusivo de 8 quadros, ataque de plasma, dano, explosão e carcaça
 - Caixas e barris destrutíveis; barris vermelhos causam dano em área e caixas podem liberar armas ou vida
 - Introdução protegida, ondas iniciais menores e disparos do chefe apontados para a posição do jogador
 - Caminhada, corrida com Shift, pulo em etapas, agachar, dano, queda, levantar e vitória
