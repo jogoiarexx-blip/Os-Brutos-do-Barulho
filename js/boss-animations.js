@@ -4,6 +4,15 @@ export const ATTACK_DURATION=30;
 export const IMPACT_AT=17;
 
 export function bossAnimationFrame(levelId,boss){
+  if(levelId===6){
+    let col=0,row=0;
+    if(boss.attack>0){
+      if(boss.attack>IMPACT_AT){col=1;row=0}
+      else if(boss.attack>8){col=boss.attackKind==='quake'?1:0;row=1}
+      else{col=1;row=0}
+    }
+    return {atlas:'bossDrill',col,row,cols:2,rows:2,w:500,h:333};
+  }
   if(levelId===5){
     let col=0,row=0;
     if(boss.attack>0){

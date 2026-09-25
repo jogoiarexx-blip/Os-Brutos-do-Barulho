@@ -34,7 +34,7 @@ function background(){
 }
 background();
 function show(html){modal.innerHTML=html;modal.classList.remove('hidden');menu.classList.add('hidden')}
-function back(){game.running=false;modal.classList.add('hidden');menu.classList.remove('hidden');document.querySelector('#hud').classList.add('hidden');background()}
+function back(){game.running=false;input.resetTouch();document.querySelector('#touch').classList.remove('playing');modal.classList.add('hidden');menu.classList.remove('hidden');document.querySelector('#hud').classList.add('hidden');background()}
 function startMission(id){
   game.start(levels[Math.max(0,Math.min(levels.length-1,id-1))],data.settings.difficulty);
   applyCharacter(game.player,data.selectedCharacter);
@@ -68,7 +68,7 @@ function armory(){
   modal.querySelector('[data-back]').onclick=back;
 }
 function how(){
-  show(`<h2>COMO JOGAR</h2><div class="cardgrid"><div class="card"><b>MOVIMENTO</b><p>A/D ou ← →: caminhar<br>Shift: correr<br>W / ↑ / Espaço: pular<br>S / ↓: agachar</p></div><div class="card"><b>COMBATE</b><p>Z/J: atirar<br>X/K: granada<br>C: esquiva</p></div><div class="card"><b>CAMPANHA</b><p>20 missões em 5 capítulos, chefes, veículos, reféns, checkpoints e upgrades permanentes.</p></div><div class="card"><b>GAMEPAD</b><p>Analógico/D-pad, A atira, B granada, X esquiva e Start pausa.</p></div></div><div class="buttons"><button data-back>VOLTAR</button></div>`);
+  show(`<h2>COMO JOGAR</h2><div class="cardgrid"><div class="card"><b>MOVIMENTO</b><p>A/D ou ← →: caminhar<br>Shift: correr<br>W / ↑ / Espaço: pular<br>S / ↓: agachar</p></div><div class="card"><b>COMBATE</b><p>Z/J: atirar<br>X/K: granada<br>C: esquiva</p></div><div class="card"><b>CELULAR</b><p>Na esquerda: andar, correr e agachar. Na direita: pular, esquivar, granada e tiro. Segure o tiro e mova ao mesmo tempo. Pausa no canto superior.</p></div><div class="card"><b>GAMEPAD</b><p>Analógico/D-pad, A atira, B granada, X esquiva e Start pausa.</p></div></div><div class="buttons"><button data-back>VOLTAR</button></div>`);
   modal.querySelector('[data-back]').onclick=back;
 }
 function endScreen(r){
@@ -79,7 +79,7 @@ function endScreen(r){
     const current=data.characters.progress[data.selectedCharacter]||1;
     if(game.level.id<=current)data.characters.progress[data.selectedCharacter]=Math.min(levels.length,Math.max(current,game.level.id+1));
   }
-  save(data);document.querySelector('#hud').classList.add('hidden');document.querySelector('#touch').classList.remove('playing');
+  save(data);input.resetTouch();document.querySelector('#hud').classList.add('hidden');document.querySelector('#touch').classList.remove('playing');
   const campaignDone=r.win&&game.level.id===levels.length&&(data.characters.progress[data.selectedCharacter]||1)>=levels.length;
   let unlockMessage='';
   if(campaignDone){

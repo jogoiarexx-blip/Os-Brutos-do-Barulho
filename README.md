@@ -33,6 +33,8 @@ Depois acesse a pasta do projeto pelo endereço exibido no servidor local.
 - Chefes das fases 1–4: preparo visível, quadro de impacto sincronizado ao projétil e recuperação; teste automatizado dos quatro atlas e dos disparos
 - Fase 5 Cânion da Morte com parallax, piso e sprites próprios; três ninhos armados destrutíveis e escolta dos demolidores com vida própria
 - Fortaleza Móvel Goliath com quatro poses em atlas WebP, ataques alternados de canhão e mísseis sincronizados com o sprite e teste de progressão até a fase 6
+- Fase 6 Minas Abandonadas com cenário subterrâneo próprio, três guinchos destrutíveis, jaulas com vida, resgate obrigatório dos três mineiros e portões por objetivo
+- Broca Titã com quatro poses WebP, broca rasteira e terremoto de destroços precedidos por animação de preparo; testes de ataques e partida completa
 - Caixas e barris destrutíveis; barris vermelhos causam dano em área e caixas podem liberar armas ou vida
 - Introdução protegida, ondas iniciais menores e disparos do chefe apontados para a posição do jogador
 - Caminhada, corrida com Shift, pulo em etapas, agachar, dano, queda, levantar e vitória
@@ -42,7 +44,7 @@ Depois acesse a pasta do projeto pelo endereço exibido no servidor local.
 - Rifle, metralhadora, escopeta, laser, lança-foguetes e granadas
 - Pulo, esquiva, combo, partículas, screen shake e áudio sintetizado
 - 4 dificuldades, upgrades permanentes e salvamento local
-- Teclado, gamepad e controles de toque
+- Teclado, gamepad e controles de toque com multitoque, soltura segura e troca de direção por arrasto
 
 ## Controles
 
@@ -53,5 +55,8 @@ Depois acesse a pasta do projeto pelo endereço exibido no servidor local.
 - Shift: correr
 - C: esquiva
 - Esc/Start: pausa
+- S ou seta para baixo: agachar
+
+No celular, use os botões à esquerda para andar, agachar e correr; à direita ficam pular, esquivar, lançar granada e atirar. O botão de pausa fica no canto superior direito. A orientação horizontal dá mais espaço para enxergar a fase.
 
 Os 20 arquivos de fases ficam em `fases/`; interface em `ui/`; motor modular em `js/`; recursos em `assets/`.

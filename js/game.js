@@ -1,7 +1,7 @@
 import {Player,Enemy,Bullet,Particle,clamp} from './entities.js';
 import {drawAtlas,vehicleRows,pickupCols} from './sprites.js';
 import {ATTACK_DURATION,IMPACT_AT,bossAnimationFrame} from './boss-animations.js';
-import {drawLevelScenery,drawSceneryProp,drawJungleProp,drawCitadelProp,drawDesertProp,drawCanyonProp} from './scenery.js';
+import {drawLevelScenery,drawSceneryProp,drawJungleProp,drawCitadelProp,drawDesertProp,drawCanyonProp,drawMineProp} from './scenery.js';
 
 export class Game{
   constructor(canvas,input,fx,saveData,onEnd){
@@ -26,6 +26,8 @@ export class Game{
     this.depots=(level.depots||[]).map(d=>({...d,max:d.hp,dead:false,hit:0}));
     this.convoy=level.convoy?{...level.convoy,max:level.convoy.hp,disabled:false,captured:false,hit:0,cool:75}:null;
     this.nests=(level.nests||[]).map(n=>({...n,max:n.hp,dead:false,hit:0,cool:65}));
+    this.lifts=(level.lifts||[]).map(l=>({...l,max:l.hp,dead:false,hit:0}));
+    this.cages=(level.cages||[]).map(l=>({...l,max:l.hp,open:false,hit:0}));
     this.hostages=level.hostages.map(x=>({x,y:555,rescued:false,celebrate:0}));
     this.spawned=new Set;this.cam=0;this.score=0;this.coins=0;this.kills=0;
     this.currentObjective=0;this.boss=null;this.vehicleTaken=false;this.checkpoint=0;this.gateToast=0;
@@ -101,6 +103,8 @@ export class Game{
     }
     this.depots.forEach(d=>{if(d.hit>0)d.hit-=dt});if(this.convoy?.hit>0)this.convoy.hit-=dt;
     if(this.nests.length&&this.currentObjective===0)this.player.x=Math.min(this.player.x,this.level.nestGate);
+    if(this.lifts.length&&this.currentObjective===0)this.player.x=Math.min(this.player.x,this.level.liftGate);
+    if(this.cages.length&&this.currentObjective===1)this.player.x=Math.min(this.player.x,this.level.minersGate);
     for(const nest of this.nests){
       if(nest.dead)continue;if(nest.hit>0)nest.hit-=dt;
       if(Math.abs(this.player.x-nest.x)>690)continue;
@@ -111,6 +115,8 @@ export class Game{
         this.bullets.push(new Bullet(sx,sy,dx/len*6.1,dy/len*6.1,'enemy',11*this.mult,'#ff9352','heavy'));
       }
     }
+    this.lifts.forEach(l=>{if(l.hit>0)l.hit-=dt});
+    this.cages.forEach(l=>{if(l.hit>0)l.hit-=dt});
     if(this.currentObjective<2&&this.player.x>this.level.boss.x-430){
       this.player.x=this.level.boss.x-430;
       if(this.gateToast<=0){
@@ -147,10 +153,11 @@ export class Game{
     }
     this.hostages.forEach(h=>{
       if(h.celebrate>0)h.celebrate--;
-      if(!h.rescued&&Math.abs(this.player.x-h.x)<50){
+      if(!h.rescued&&Math.abs(this.player.x-h.x)<50&&(!this.cages.length||this.cages.find(c=>c.x===h.x)?.open)){
         h.rescued=true;h.celebrate=55;this.score+=1000;this.coins+=25;this.fx.coin();
         this.toast('PRISIONEIRO RESGATADO +1000');
         if(this.level.id===1&&this.hostages.filter(x=>x.rescued).length>=3&&this.currentObjective===1)this.completeObjective(1,'TODOS OS PRISIONEIROS FORAM SALVOS');
+        if(this.level.id===6&&this.hostages.every(x=>x.rescued)&&this.currentObjective===1)this.completeObjective(1,'TODOS OS MINEIROS ESTÃO LIVRES');
       }
     });
     if(!this.vehicleTaken&&this.level.vehicle&&Math.abs(this.player.x-this.level.vehicle.x)<65){
@@ -214,6 +221,20 @@ export class Game{
             }
           }
         }
+        for(const lift of this.lifts){
+          if(b.life<=0||lift.dead)continue;
+          if(Math.abs(b.x-lift.x)<130&&Math.abs(b.y-452)<105){
+            lift.hp-=b.damage;lift.hit=7;b.life=0;this.burst(b.x,b.y,'#61e9ff',4);
+            if(lift.hp<=0){lift.hp=0;lift.dead=true;this.score+=850;this.coins+=15;this.burst(lift.x,455,'#71efff',22);this.fx.boom();if(this.lifts.every(l=>l.dead))this.completeObjective(0,'GUINCHOS DESATIVADOS')}
+          }
+        }
+        for(const cage of this.cages){
+          if(b.life<=0||cage.open)continue;
+          if(Math.abs(b.x-cage.x)<105&&Math.abs(b.y-459)<103){
+            cage.hp-=b.damage;cage.hit=7;b.life=0;this.burst(b.x,b.y,'#ffc46b',4);
+            if(cage.hp<=0){cage.hp=0;cage.open=true;this.burst(cage.x,485,'#7eebff',18);this.fx.boom();this.toast('JAULA ABERTA · ALCANCE OS MINEIROS')}
+          }
+        }
         if(this.convoy&&!this.convoy.disabled&&b.life>0&&Math.abs(b.x-this.convoy.x)<170&&Math.abs(b.y-465)<94){
           this.convoy.hp-=b.damage;this.convoy.hit=7;b.life=0;this.burst(b.x,b.y,'#ffae56',4);
           if(this.convoy.hp<=0){this.convoy.hp=0;this.convoy.disabled=true;this.burst(this.convoy.x,475,'#ffa349',22);this.fx.boom();this.toast('COMBOIO IMOBILIZADO · APROXIME-SE PARA CAPTURAR')}
@@ -240,7 +261,7 @@ export class Game{
             if(e.hp<=0)this.kill(e);
           }
         }
-        const bossHalfW=this.level.id===3?105:this.level.id===5?210:185,bossHalfH=this.level.id===3?135:this.level.id===4||this.level.id===5?145:105;
+        const bossHalfW=this.level.id===3?105:this.level.id===5||this.level.id===6?210:185,bossHalfH=this.level.id===3?135:[4,5,6].includes(this.level.id)?145:105;
         if(this.boss&&!this.boss.dead&&b.life>0&&Math.abs(b.x-this.boss.x)<bossHalfW&&Math.abs(b.y-(this.boss.y-95))<bossHalfH){
           this.boss.hp-=b.damage;this.boss.hit=7;b.life=0;this.burst(b.x,b.y,'#ff712e',4);
           if(this.boss.hp<=0){
@@ -250,6 +271,7 @@ export class Game{
             if(this.level.id===3)this.completeObjective(2,'GENERAL VOSS DERROTADO');
             if(this.level.id===4)this.completeObjective(2,'ESCORPIÃO DE AÇO DERROTADO');
             if(this.level.id===5)this.completeObjective(2,'FORTALEZA GOLIATH DESTRUÍDA');
+            if(this.level.id===6)this.completeObjective(2,'BROCA TITÃ DESLIGADA');
             this.burst(this.boss.x,this.boss.y-90,'#ff5a20',28);this.fx.boom();
           }
         }
@@ -264,7 +286,7 @@ export class Game{
         if(!boss.fired&&boss.attack<=IMPACT_AT){boss.fired=true;this.fireBossAttack()}
       }else if(--boss.cool<0){
         boss.pattern++;boss.fired=false;boss.attack=ATTACK_DURATION;
-        boss.attackKind=this.level.id===3&&boss.pattern%2===0?'low':this.level.id===4&&boss.pattern%3===0?'claw':this.level.id===4&&boss.pattern%3===1?'sting':this.level.id===5?(boss.pattern%2?'cannon':'missiles'):'volley';
+        boss.attackKind=this.level.id===3&&boss.pattern%2===0?'low':this.level.id===4&&boss.pattern%3===0?'claw':this.level.id===4&&boss.pattern%3===1?'sting':this.level.id===5?(boss.pattern%2?'cannon':'missiles'):this.level.id===6?(boss.pattern%2?'drill':'quake'):'volley';
         boss.cool=boss.hp<boss.max*.5?34:48;
       }
     }
@@ -274,7 +296,13 @@ export class Game{
     const boss=this.boss,enraged=boss.hp<boss.max*.5;
     const sx=boss.x-(this.level.id===3?115:180),sy=boss.y-205;
     const dx=this.player.x-sx,dy=this.player.y-35-sy,angle=Math.atan2(dy,dx);
-    if(boss.attackKind==='cannon'){
+    if(boss.attackKind==='drill'){
+      for(const speed of[6.3,7.8,9.2])this.bullets.push(new Bullet(boss.x-225,boss.y-36,-speed,0,'enemy',14*this.mult,'#60efff','heavy'));
+      this.burst(boss.x-240,boss.y-45,'#71eeff',15);
+    }else if(boss.attackKind==='quake'){
+      for(const offset of[-140,0,140])this.bullets.push(new Bullet(this.player.x+offset,185,0,5.9,'enemy',13*this.mult,'#61e8ff','rocket'));
+      this.burst(this.player.x,185,'#6eeeff',12);
+    }else if(boss.attackKind==='cannon'){
       const px=boss.x-205,py=boss.y-185,a=Math.atan2(this.player.y-35-py,this.player.x-px);
       for(const offset of[-.12,0,.12])this.bullets.push(new Bullet(px,py,Math.cos(a+offset)*7.3,Math.sin(a+offset)*7.3,'enemy',15*this.mult,'#ff9c43','heavy'));
     }else if(boss.attackKind==='missiles'){
@@ -405,6 +433,8 @@ export class Game{
     if(this.level.id===4&&this.currentObjective===1&&this.convoy)objective+=this.convoy.disabled?' · APROXIME-SE':` · ${Math.max(0,Math.ceil(this.convoy.hp))} HP`;
     if(this.level.id===5&&this.currentObjective===0)objective+=` · ${this.nests.filter(n=>n.dead).length}/${this.nests.length}`;
     if(this.level.id===5&&this.currentObjective===1&&this.ally)objective+=` · HP ${Math.max(0,Math.ceil(this.ally.hp))}`;
+    if(this.level.id===6&&this.currentObjective===0)objective+=` · ${this.lifts.filter(l=>l.dead).length}/${this.lifts.length}`;
+    if(this.level.id===6&&this.currentObjective===1)objective+=` · ${this.hostages.filter(h=>h.rescued).length}/${this.hostages.length}`;
     document.querySelector('#objective').textContent=objective;
     document.querySelector('#score').textContent=String(Math.floor(this.score)).padStart(6,'0');
     document.querySelector('#grenades').textContent=`GRANADAS ×${this.player.grenades}`;
@@ -425,6 +455,7 @@ export class Game{
     }
 
     this.hostages.forEach(h=>{
+      if(this.level.id===6&&this.cages.find(c=>c.x===h.x&&!c.open)&&!h.rescued)return;
       if(h.rescued&&h.celebrate<=0)return;
       const x=h.x-cam,col=h.rescued?1:0;
       if(!drawAtlas(c,'support',col,3,4,4,x-43,458,86,98)){
@@ -502,6 +533,22 @@ export class Game{
         c.fillStyle='#251512';c.fillRect(x-61,337,122,9);c.fillStyle='#ffb05b';c.fillRect(x-59,340,118*nest.hp/nest.max,4);
       }else{c.fillStyle='#45302b';c.fillRect(x-86,531,172,24);c.fillStyle='#ff824455';c.fillRect(x-55,526,110,5)}
     }
+    for(const lift of this.lifts){
+      const x=lift.x-cam;if(x<-210||x>1490)continue;
+      if(!lift.dead){drawMineProp(c,'lift',x,555,.9);if(lift.hit>0){c.fillStyle='#77e9ff45';c.fillRect(x-150,348,300,207)}
+        c.fillStyle='#0a1c27';c.fillRect(x-64,331,128,8);c.fillStyle='#73eaff';c.fillRect(x-62,333,124*lift.hp/lift.max,4);
+      }else{c.fillStyle='#2f4854';c.fillRect(x-76,529,152,26);c.fillStyle='#5dcde977';c.fillRect(x-43,522,86,6)}
+    }
+    for(const cage of this.cages){
+      const x=cage.x-cam;if(x<-180||x>1460)continue;
+      if(!cage.open){drawMineProp(c,'cage',x,555,.87);if(cage.hit>0){c.fillStyle='#ffe5a344';c.fillRect(x-115,380,230,175)}
+        c.fillStyle='#101c23';c.fillRect(x-52,369,104,8);c.fillStyle='#f7c66b';c.fillRect(x-50,371,100*cage.hp/cage.max,4);
+      }else if(!this.hostages.find(h=>h.x===cage.x)?.rescued){c.fillStyle='#79efff';c.font='18px Rajdhani';c.textAlign='center';c.fillText('MINEIROS LIVRES · APROXIME-SE',x,393)}
+    }
+    if(this.level.id===6&&this.currentObjective<2){
+      const gateX=(this.currentObjective===0?this.level.liftGate:this.level.minersGate)-cam;
+      if(gateX>-180&&gateX<1460)drawMineProp(c,'gate',gateX,555,.9);
+    }
 
     if(this.level.vehicle&&!this.vehicleTaken){
       const x=this.level.vehicle.x-cam,type=this.level.vehicle.type,row=vehicleRows[type]??0;
@@ -534,7 +581,7 @@ export class Game{
     if(this.boss){
       const b=this.boss,x=b.x-cam,frame=bossAnimationFrame(this.level.id,b);
       c.save();
-      if((this.level.id===4||this.level.id===5)&&b.dead)c.globalAlpha=Math.max(0,b.death/70);
+      if([4,5,6].includes(this.level.id)&&b.dead)c.globalAlpha=Math.max(0,b.death/70);
       if(this.level.id===4&&b.hit>0&&Math.floor(b.hit/2)%2)c.globalAlpha*=.55;
       const bob=this.level.id===4&&!b.dead?Math.sin(b.anim*.11)*3:0;
       const drawn=drawAtlas(c,frame.atlas,frame.col,frame.row,frame.cols,frame.rows,x-frame.w/2,555-frame.h+bob,frame.w,frame.h);
@@ -555,13 +602,14 @@ export class Game{
       else if(this.level.id===3)drawCitadelProp(c,'arenaClosed',gx,555,.8,false,this.time);
       else if(this.level.id===4)drawDesertProp(c,'barrier',gx,555,.8,false);
       else if(this.level.id===5)drawCanyonProp(c,'rocks',gx,555,.8,false);
+      else if(this.level.id===6)drawMineProp(c,'gate',gx,555,.84);
       else{c.fillStyle='#242b31';c.fillRect(gx-12,402,24,153);c.fillRect(1260,402,20,153);c.fillStyle='#ffcc31';for(let y=414;y<548;y+=28){c.save();c.translate(gx,y);c.rotate(-.55);c.fillRect(-18,-5,36,10);c.restore()}}
     }
     if(this.intro>0){
       c.fillStyle=`rgba(0,0,0,${Math.min(.55,this.intro/90)})`;c.fillRect(0,0,1280,720);
       c.textAlign='center';c.fillStyle='#ffd348';c.font='25px Black Ops One';c.fillText(`MISSÃO ${this.level.id}`,640,286);
       c.fillStyle='white';c.font='52px Black Ops One';c.fillText(this.level.name,640,345);
-      const briefing=this.level.id===2?'Derrube o sinal inimigo e leve o Dr. Trovão vivo até o laboratório!':this.level.id===3?'Abra a muralha, sobreviva à armadilha e cale o General Voss!':this.level.id===4?'Exploda os depósitos, pare o comboio e desmonte o escorpião!':this.level.id===5?'Limpe os ninhos, proteja os demolidores e pare Goliath!':'A Legião Ferro fechou o porto. Abra caminho e tire todo mundo de lá!';
+      const briefing=this.level.id===2?'Derrube o sinal inimigo e leve o Dr. Trovão vivo até o laboratório!':this.level.id===3?'Abra a muralha, sobreviva à armadilha e cale o General Voss!':this.level.id===4?'Exploda os depósitos, pare o comboio e desmonte o escorpião!':this.level.id===5?'Limpe os ninhos, proteja os demolidores e pare Goliath!':this.level.id===6?'Quebre os guinchos, abra as jaulas e desligue a Broca Titã!':'A Legião Ferro fechou o porto. Abra caminho e tire todo mundo de lá!';
       c.font='21px Rajdhani';c.fillText(briefing,640,387);
     }
     if(this.player.combo>1){c.fillStyle='#ffe048';c.font='34px Black Ops One';c.textAlign='left';c.fillText(`${this.player.combo}× COMBO`,30,150)}

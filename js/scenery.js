@@ -5,6 +5,7 @@ const jungle={backdrop:makeImage(),midground:makeImage(),ground:makeImage(),prop
 const citadel={backdrop:makeImage(),midground:makeImage(),ground:makeImage(),props:makeImage()};
 const desert={backdrop:makeImage(),midground:makeImage(),ground:makeImage(),props:makeImage()};
 const canyon={backdrop:makeImage(),midground:makeImage(),ground:makeImage(),props:makeImage()};
+const mine={backdrop:makeImage(),midground:makeImage(),ground:makeImage(),props:makeImage()};
 
 if(typeof Image!=='undefined'){
   port.backdrop.src='assets/levels/port-fire/backdrop.webp';
@@ -27,6 +28,10 @@ if(typeof Image!=='undefined'){
   canyon.midground.src='assets/levels/death-canyon/midground.webp';
   canyon.ground.src='assets/levels/death-canyon/ground.webp';
   canyon.props.src='assets/levels/death-canyon/props-atlas.webp';
+  mine.backdrop.src='assets/levels/abandoned-mines/backdrop.webp';
+  mine.midground.src='assets/levels/abandoned-mines/midground.webp';
+  mine.ground.src='assets/levels/abandoned-mines/ground.webp';
+  mine.props.src='assets/levels/abandoned-mines/props-atlas.webp';
 }
 
 const propCells={
@@ -44,6 +49,21 @@ function repeatImage(c,img,offset,y,w,h){
   const start=-((offset%w)+w)%w;
   for(let x=start-w;x<1280+w;x+=w)c.drawImage(img,x,y,w,h);
   return true;
+}
+
+function repeatImageFaded(c,img,offset,y,w,h,fade=130){
+  if(!loaded(img))return false;
+  const start=-((offset%w)+w)%w;
+  for(let x=start-w;x<1280+w;x+=w){
+    for(let stripe=0;stripe<10;stripe++){
+      const top=stripe*fade/10,height=fade/10;
+      c.globalAlpha=(stripe+.5)/10;
+      c.drawImage(img,0,img.naturalHeight*top/h,img.naturalWidth,img.naturalHeight*height/h,x,y+top,w,height+.5);
+    }
+    c.globalAlpha=1;
+    c.drawImage(img,0,img.naturalHeight*fade/h,img.naturalWidth,img.naturalHeight*(h-fade)/h,x,y+fade,w,h-fade);
+  }
+  c.globalAlpha=1;return true;
 }
 
 export function drawSceneryProp(c,type,x,y,scale=1,flip=false,time=0,damage=0){
@@ -98,7 +118,25 @@ export function drawCanyonProp(c,type,x,y,scale=1,flip=false){
   c.drawImage(canyon.props,col*sw,row*sh,sw,sh,-w/2,-h,w,h);c.restore();
 }
 
+export function drawMineProp(c,type,x,y,scale=1,flip=false){
+  const cells={lift:[0,0,350,230],cage:[1,0,280,200],rocks:[0,1,300,175],gate:[1,1,290,205]};
+  const spec=cells[type];if(!spec||!loaded(mine.props))return;
+  const [col,row,w,h]=spec,sw=mine.props.naturalWidth/2,sh=mine.props.naturalHeight/2;
+  c.save();c.translate(x,y);c.scale((flip?-1:1)*scale,scale);
+  c.drawImage(mine.props,col*sw,row*sh,sw,sh,-w/2,-h,w,h);c.restore();
+}
+
 export function drawLevelScenery(c,level,cam,time){
+  if(level.id===6){
+    c.fillStyle='#10253c';c.fillRect(0,0,1280,720);
+    repeatImage(c,mine.backdrop,cam*.055,0,1665,555);
+    repeatImageFaded(c,mine.midground,cam*.22,202,1065,355);
+    const haze=c.createLinearGradient(0,265,0,555);haze.addColorStop(0,'#3baac000');haze.addColorStop(1,'#33cbe820');c.fillStyle=haze;c.fillRect(0,265,1280,290);
+    if(!repeatImage(c,mine.ground,cam,555,495,165)){c.fillStyle=level.ground;c.fillRect(0,555,1280,165)}
+    for(const[type,worldX,scale=1,flip=false]of level.scenery||[]){const x=worldX-cam;if(x>-250&&x<1530)drawMineProp(c,type,x,555,scale,flip)}
+    c.fillStyle='#81f5ff';for(let i=0;i<28;i++){const x=((i*113-cam*.15+time*(.25+i%3*.12))%1450+1450)%1450,y=130+(i*79)%400;c.globalAlpha=.08+(i%4)*.045;c.fillRect(x,y,2+i%3,2+i%2)}c.globalAlpha=1;
+    return true;
+  }
   if(level.id===5){
     c.fillStyle='#68404a';c.fillRect(0,0,1280,720);
     repeatImage(c,canyon.backdrop,cam*.055,0,1665,555);
