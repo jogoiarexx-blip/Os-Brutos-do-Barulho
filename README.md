@@ -31,6 +31,8 @@ Depois acesse a pasta do projeto pelo endereço exibido no servidor local.
 - Fase 4 no deserto com parallax, poeira, piso e adereços próprios; três depósitos sabotáveis e comboio blindado que exige imobilização e aproximação para captura
 - Escorpião de Aço com atlas exclusivo de 4 poses (repouso, carga, ferrão e garras), ferrão de plasma e rajada rasteira
 - Chefes das fases 1–4: preparo visível, quadro de impacto sincronizado ao projétil e recuperação; teste automatizado dos quatro atlas e dos disparos
+- Fase 5 Cânion da Morte com parallax, piso e sprites próprios; três ninhos armados destrutíveis e escolta dos demolidores com vida própria
+- Fortaleza Móvel Goliath com quatro poses em atlas WebP, ataques alternados de canhão e mísseis sincronizados com o sprite e teste de progressão até a fase 6
 - Caixas e barris destrutíveis; barris vermelhos causam dano em área e caixas podem liberar armas ou vida
 - Introdução protegida, ondas iniciais menores e disparos do chefe apontados para a posição do jogador
 - Caminhada, corrida com Shift, pulo em etapas, agachar, dano, queda, levantar e vitória

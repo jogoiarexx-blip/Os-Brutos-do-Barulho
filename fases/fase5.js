@@ -1,1 +1,12 @@
-export default {"id":5,"name":"CÂNION DA MORTE","subtitle":"Atravesse a garganta minada","length":8500,"sky":["#391d18","#b85f37"],"ground":"#4b2c26","unlock":4,"chapter":2,"objectives":[{"x":1200,"text":"Limpe os ninhos de metralhadora"},{"x":3910,"text":"Proteja os demolidores"},{"x":6460,"text":"Destrua a Fortaleza Móvel"}],"checkpoints":[2380,4930,6630],"enemies":[["gunner",500,16],["shield",2000,9],["drone",3500,12],["elite",5000,8]],"hostages":[1800,3200,4800,5355],"vehicle":{"x":4675,"type":"tank"},"boss":{"x":7600,"type":"fortress","name":"FORTALEZA MÓVEL GOLIATH","hp":1800},"weather":"embers"};
+export default {
+  id:5,name:'CÂNION DA MORTE',subtitle:'Destrua os ninhos, escolte os demolidores e derrube Goliath',
+  length:8500,sky:['#573142','#dd8350'],ground:'#632d28',unlock:4,chapter:2,
+  objectives:[{text:'Destrua os 3 ninhos de metralhadora'},{text:'Escolte os demolidores até o paredão'},{text:'Destrua a Fortaleza Móvel Goliath'}],
+  checkpoints:[2260,4890,6540],
+  enemies:[['gunner',530,13],['shield',2020,10],['drone',3650,11],['elite',5100,10]],
+  hostages:[1490,2980,5250],vehicle:{x:5700,type:'tank'},
+  nests:[{x:950,hp:180},{x:1780,hp:215},{x:2680,hp:250}],nestGate:3150,
+  ally:{start:3480,end:6210,hp:230,name:'DEMOLIDORES'},
+  scenery:[['rocks',420,.75],['charge',1320,.65],['rocks',2190,.72],['rocks',3200,.8],['charge',4200,.7],['rocks',4860,.75],['charge',5900,.72],['rocks',6880,.8]],
+  boss:{x:7600,type:'fortress',name:'FORTALEZA MÓVEL GOLIATH',hp:1800},weather:'dust'
+};

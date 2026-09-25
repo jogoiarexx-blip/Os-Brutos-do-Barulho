@@ -14,7 +14,10 @@ export class Bullet{
   draw(c,cam){
     const x=this.x-cam;c.save();c.translate(x,this.y);if(this.vx<0)c.scale(-1,1);
     if(this.team==='enemy'){
-      c.shadowColor='#ff3b2f';c.shadowBlur=10;c.fillStyle='#ff5a42';c.fillRect(-10,-3,20,6);
+      if(this.sprite==='rocket'){
+        c.shadowColor='#ffac42';c.shadowBlur=12;c.fillStyle='#ffba52';c.fillRect(-16,-5,28,10);
+        c.fillStyle='#fff2c6';c.beginPath();c.moveTo(16,0);c.lineTo(6,-7);c.lineTo(6,7);c.fill();
+      }else{c.shadowColor='#ff3b2f';c.shadowBlur=10;c.fillStyle='#ff5a42';c.fillRect(-10,-3,20,6)}
     }else if(this.team==='grenade'){
       if(!drawAtlas(c,'effects',0,1,5,5,-14,-16,28,28)){c.fillStyle='#9aff53';c.beginPath();c.arc(0,0,8,0,7);c.fill()}
     }else{

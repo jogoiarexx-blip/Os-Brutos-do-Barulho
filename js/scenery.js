@@ -4,6 +4,7 @@ const port={backdrop:makeImage(),midground:makeImage(),ground:makeImage(),props:
 const jungle={backdrop:makeImage(),midground:makeImage(),ground:makeImage(),props:makeImage()};
 const citadel={backdrop:makeImage(),midground:makeImage(),ground:makeImage(),props:makeImage()};
 const desert={backdrop:makeImage(),midground:makeImage(),ground:makeImage(),props:makeImage()};
+const canyon={backdrop:makeImage(),midground:makeImage(),ground:makeImage(),props:makeImage()};
 
 if(typeof Image!=='undefined'){
   port.backdrop.src='assets/levels/port-fire/backdrop.webp';
@@ -22,6 +23,10 @@ if(typeof Image!=='undefined'){
   desert.midground.src='assets/levels/serpent-desert/midground.webp';
   desert.ground.src='assets/levels/serpent-desert/ground.webp';
   desert.props.src='assets/levels/serpent-desert/props-atlas.webp';
+  canyon.backdrop.src='assets/levels/death-canyon/backdrop.webp';
+  canyon.midground.src='assets/levels/death-canyon/midground.webp';
+  canyon.ground.src='assets/levels/death-canyon/ground.webp';
+  canyon.props.src='assets/levels/death-canyon/props-atlas.webp';
 }
 
 const propCells={
@@ -85,7 +90,25 @@ export function drawDesertProp(c,type,x,y,scale=1,flip=false){
   c.drawImage(desert.props,col*sw,row*sh,sw,sh,-w/2,-h,w,h);c.restore();
 }
 
+export function drawCanyonProp(c,type,x,y,scale=1,flip=false){
+  const cells={nest:[0,0,330,230],demolishers:[1,0,208,124],rocks:[0,1,290,170],charge:[1,1,230,140]};
+  const spec=cells[type];if(!spec||!loaded(canyon.props))return;
+  const [col,row,w,h]=spec,sw=canyon.props.naturalWidth/2,sh=canyon.props.naturalHeight/2;
+  c.save();c.translate(x,y);c.scale((flip?-1:1)*scale,scale);
+  c.drawImage(canyon.props,col*sw,row*sh,sw,sh,-w/2,-h,w,h);c.restore();
+}
+
 export function drawLevelScenery(c,level,cam,time){
+  if(level.id===5){
+    c.fillStyle='#68404a';c.fillRect(0,0,1280,720);
+    repeatImage(c,canyon.backdrop,cam*.055,0,1665,555);
+    repeatImage(c,canyon.midground,cam*.2,202,1065,355);
+    const dust=c.createLinearGradient(0,320,0,555);dust.addColorStop(0,'#e6935800');dust.addColorStop(1,'#e6935838');c.fillStyle=dust;c.fillRect(0,320,1280,235);
+    if(!repeatImage(c,canyon.ground,cam,555,495,165)){c.fillStyle=level.ground;c.fillRect(0,555,1280,165)}
+    for(const[type,worldX,scale=1,flip=false]of level.scenery||[]){const x=worldX-cam;if(x>-250&&x<1530)drawCanyonProp(c,type,x,555,scale,flip)}
+    c.fillStyle='#ffd6a9';for(let i=0;i<30;i++){const x=((i*109-cam*.3-time*(.9+i%3*.3))%1450+1450)%1450,y=110+(i*69+time*.2)%430;c.globalAlpha=.09+(i%4)*.05;c.fillRect(x,y,3+i%3,2)}c.globalAlpha=1;
+    return true;
+  }
   if(level.id===4){
     c.fillStyle='#b85333';c.fillRect(0,0,1280,720);
     repeatImage(c,desert.backdrop,cam*.055,0,1665,555);
