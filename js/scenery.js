@@ -2,6 +2,7 @@ const makeImage=()=>typeof Image!=='undefined'?new Image():{complete:false,natur
 
 const port={backdrop:makeImage(),midground:makeImage(),ground:makeImage(),props:makeImage()};
 const jungle={backdrop:makeImage(),midground:makeImage(),ground:makeImage(),props:makeImage()};
+const citadel={backdrop:makeImage(),midground:makeImage(),ground:makeImage(),props:makeImage()};
 
 if(typeof Image!=='undefined'){
   port.backdrop.src='assets/levels/port-fire/backdrop.webp';
@@ -12,6 +13,10 @@ if(typeof Image!=='undefined'){
   jungle.midground.src='assets/levels/jungle-storm/midground.webp';
   jungle.ground.src='assets/levels/jungle-storm/ground.webp';
   jungle.props.src='assets/levels/jungle-storm/props-atlas.webp';
+  citadel.backdrop.src='assets/levels/iron-citadel/backdrop.webp';
+  citadel.midground.src='assets/levels/iron-citadel/midground.webp';
+  citadel.ground.src='assets/levels/iron-citadel/ground.webp';
+  citadel.props.src='assets/levels/iron-citadel/props-atlas.webp';
 }
 
 const propCells={
@@ -20,6 +25,7 @@ const propCells={
   fire:[0,2,98,88],barrier:[1,2,124,72],bollard:[2,2,76,72],scrap:[3,2,128,86]
 };
 const jungleCells={gateClosed:[0,1,190,150],gateOpen:[1,1,190,150],checkpoint:[2,1,110,155],bridge:[3,1,230,130],fern:[0,2,150,105],barrier:[1,2,150,94],generator:[2,2,155,110],crates:[3,2,145,104]};
+const citadelCells={arenaClosed:[0,1,175,150],arenaOpen:[1,1,175,150],checkpoint:[2,1,105,150],searchlight:[3,1,145,190],rubble:[0,2,160,112],sandbags:[1,2,160,100],statue:[2,2,145,175],ammo:[3,2,155,110]};
 
 function loaded(img){return img.complete&&img.naturalWidth>0}
 
@@ -58,7 +64,25 @@ export function drawJungleProp(c,type,x,y,scale=1,flip=false,time=0){
   c.drawImage(jungle.props,col*sw,row*sh,sw,sh,-w/2,-h,w,h);c.restore();
 }
 
+export function drawCitadelProp(c,type,x,y,scale=1,flip=false,time=0){
+  const spec=citadelCells[type];if(!spec||!loaded(citadel.props))return;
+  const [col,row,w,h]=spec,sw=citadel.props.naturalWidth/4,sh=citadel.props.naturalHeight/3;
+  const pulse=type==='checkpoint'?1+Math.sin(time*.12)*.035:1;
+  c.save();c.translate(x,y);c.scale((flip?-1:1)*scale*pulse,scale/pulse);
+  c.drawImage(citadel.props,col*sw,row*sh,sw,sh,-w/2,-h,w,h);c.restore();
+}
+
 export function drawLevelScenery(c,level,cam,time){
+  if(level.id===3){
+    c.fillStyle='#160d1c';c.fillRect(0,0,1280,720);
+    repeatImage(c,citadel.backdrop,cam*.05,0,1665,555);
+    repeatImage(c,citadel.midground,cam*.2,202,1065,355);
+    const smoke=c.createLinearGradient(0,260,0,560);smoke.addColorStop(0,'#7b3e6900');smoke.addColorStop(1,'#3b243f40');c.fillStyle=smoke;c.fillRect(0,260,1280,300);
+    if(!repeatImage(c,citadel.ground,cam,555,495,165)){c.fillStyle=level.ground;c.fillRect(0,555,1280,165)}
+    for(const item of level.scenery||[]){const[type,worldX,scale=1,flip=false]=item,x=worldX-cam;if(x>-220&&x<1500)drawCitadelProp(c,type,x,555,scale,flip,time)}
+    c.fillStyle='#ff9b46';for(let i=0;i<28;i++){const x=((i*127-cam*.28+time*(.3+i%3*.15))%1450+1450)%1450,y=520-((i*61+time*(.8+i%2))%410);c.globalAlpha=.15+(i%4)*.08;c.fillRect(x,y,2+i%2,2+i%2)}c.globalAlpha=1;
+    return true;
+  }
   if(level.id===2){
     c.fillStyle='#071a1c';c.fillRect(0,0,1280,720);
     repeatImage(c,jungle.backdrop,cam*.055,0,1525,555);

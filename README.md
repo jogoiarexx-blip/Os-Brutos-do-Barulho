@@ -25,6 +25,9 @@ Depois acesse a pasta do projeto pelo endereço exibido no servidor local.
 - Fase 2 completa com selva tempestuosa em parallax, chuva, relâmpagos e piso próprio
 - Três torres de rádio destrutíveis, escolta do Dr. Trovão com vida própria e portões por objetivo
 - Mamute Ômega com atlas exclusivo de 8 quadros, ataque de plasma, dano, explosão e carcaça
+- Fase 3 completa com cidadela em guerra, cinzas, holofotes, ruínas e piso fortificado
+- Portão blindado destrutível e emboscada imperial com arena fechada e contagem real de alvos
+- General Voss com atlas exclusivo de 8 quadros e padrões alternados de tiros em leque e ataques rasteiros
 - Caixas e barris destrutíveis; barris vermelhos causam dano em área e caixas podem liberar armas ou vida
 - Introdução protegida, ondas iniciais menores e disparos do chefe apontados para a posição do jogador
 - Caminhada, corrida com Shift, pulo em etapas, agachar, dano, queda, levantar e vitória

@@ -1,6 +1,6 @@
 import {Player,Enemy,Bullet,Particle,clamp} from './entities.js';
 import {drawAtlas,vehicleRows,pickupCols} from './sprites.js';
-import {drawLevelScenery,drawSceneryProp,drawJungleProp} from './scenery.js';
+import {drawLevelScenery,drawSceneryProp,drawJungleProp,drawCitadelProp} from './scenery.js';
 
 export class Game{
   constructor(canvas,input,fx,saveData,onEnd){
@@ -20,6 +20,8 @@ export class Game{
     this.outpost=level.outpost?{...level.outpost,y:555,max:level.outpost.hp,dead:false,death:0,hit:0,attack:0,cool:55,anim:0}:null;
     this.radios=(level.radios||[]).map(r=>({...r,y:555,max:r.hp,dead:false,hit:0,anim:0}));
     this.ally=level.ally?{...level.ally,x:level.ally.start,y:555,max:level.ally.hp,active:false,complete:false,dead:false,inv:0,anim:0,dir:1}:null;
+    this.breach=level.breach?{...level.breach,y:555,max:level.breach.hp,dead:false,hit:0,death:0}:null;
+    this.ambush=level.ambush?{...level.ambush,active:false,complete:false,kills:0}:null;
     this.hostages=level.hostages.map(x=>({x,y:555,rescued:false,celebrate:0}));
     this.spawned=new Set;this.cam=0;this.score=0;this.coins=0;this.kills=0;
     this.currentObjective=0;this.boss=null;this.vehicleTaken=false;this.checkpoint=0;this.gateToast=0;
@@ -71,6 +73,11 @@ export class Game{
         this.player.x=Math.min(this.player.x,this.ally.x+390);
         if(this.ally.x>=this.ally.end-5){this.ally.complete=true;this.completeObjective(1,`${this.ally.name} CHEGOU AO LABORATÓRIO`)}
       }
+    }
+    if(this.breach&&!this.breach.dead){this.player.x=Math.min(this.player.x,this.breach.x-190);if(this.breach.hit>0)this.breach.hit-=dt}
+    if(this.ambush&&this.currentObjective===1){
+      if(!this.ambush.active&&this.player.x>=this.ambush.x-80)this.startAmbush();
+      if(this.ambush.active)this.player.x=clamp(this.player.x,this.ambush.left,this.ambush.right);
     }
     if(this.currentObjective<2&&this.player.x>this.level.boss.x-430){
       this.player.x=this.level.boss.x-430;
@@ -152,6 +159,13 @@ export class Game{
             }
           }
         }
+        if(this.breach&&!this.breach.dead&&b.life>0&&Math.abs(b.x-this.breach.x)<150&&Math.abs(b.y-410)<155){
+          this.breach.hp-=b.damage;this.breach.hit=7;b.life=0;this.burst(b.x,b.y,'#ff9a43',5);
+          if(this.breach.hp<=0){
+            this.breach.hp=0;this.breach.dead=true;this.breach.death=55;this.score+=1600;this.coins+=30;
+            this.burst(this.breach.x,this.breach.y-110,'#ff6b32',32);this.fx.boom();this.completeObjective(0,'MURALHA INVADIDA');
+          }
+        }
         for(const d of this.destructibles){
           if(b.life<=0||d.dead)continue;
           const size=d.type==='crate'?42:32;
@@ -167,12 +181,14 @@ export class Game{
             if(e.hp<=0)this.kill(e);
           }
         }
-        if(this.boss&&!this.boss.dead&&b.life>0&&Math.abs(b.x-this.boss.x)<185&&Math.abs(b.y-(this.boss.y-95))<105){
+        const bossHalfW=this.level.id===3?105:185,bossHalfH=this.level.id===3?135:105;
+        if(this.boss&&!this.boss.dead&&b.life>0&&Math.abs(b.x-this.boss.x)<bossHalfW&&Math.abs(b.y-(this.boss.y-95))<bossHalfH){
           this.boss.hp-=b.damage;this.boss.hit=7;b.life=0;this.burst(b.x,b.y,'#ff712e',4);
           if(this.boss.hp<=0){
             this.boss.hp=0;this.boss.dead=true;this.boss.death=70;this.boss.attack=0;
             if(this.level.id===1)this.completeObjective(2,'COLOSSO FERROVIÁRIO DESTRUÍDO');
             if(this.level.id===2)this.completeObjective(2,'MAMUTE ÔMEGA DESTRUÍDO');
+            if(this.level.id===3)this.completeObjective(2,'GENERAL VOSS DERROTADO');
             this.burst(this.boss.x,this.boss.y-90,'#ff5a20',28);this.fx.boom();
           }
         }
@@ -188,9 +204,12 @@ export class Game{
         this.boss.cool=enraged?34:48;this.boss.attack=14;
         const sx=this.boss.x-180,sy=this.boss.y-205;
         const dx=this.player.x-sx,dy=(this.player.y-35)-sy,len=Math.hypot(dx,dy)||1,angle=Math.atan2(dy,dx);
-        for(const spread of[-.13,0,.13]){
-          const a=angle+spread,speed=enraged?7.4:6.6;
-          this.bullets.push(new Bullet(sx,sy,Math.cos(a)*speed,Math.sin(a)*speed,'enemy',12*this.mult,'#ff6045','heavy'));
+        this.boss.pattern++;
+        if(this.level.id===3&&this.boss.pattern%2===0){
+          for(const speed of[6.4,8.2])this.bullets.push(new Bullet(sx,this.boss.y-22,-speed,0,'enemy',14*this.mult,'#ff8b35','heavy'));
+        }else{
+          const spreads=this.level.id===3?[-.24,-.12,0,.12,.24]:[-.13,0,.13];
+          for(const spread of spreads){const a=angle+spread,speed=enraged?7.4:6.6,color=this.level.id===2?'#55efff':'#ff6045';this.bullets.push(new Bullet(sx,sy,Math.cos(a)*speed,Math.sin(a)*speed,'enemy',12*this.mult,color,'heavy'))}
         }
       }
     }
@@ -211,6 +230,10 @@ export class Game{
   kill(e){
     e.dead=true;e.death=24;this.kills++;this.score+=100*(1+this.player.combo);this.coins+=5;
     this.player.combo++;this.player.comboTime=150;this.burst(e.x,e.y-25,'#ff8a26',12);this.fx.boom();
+    if(e.event==='ambush'&&this.ambush?.active){
+      this.ambush.kills++;
+      if(this.ambush.kills>=this.ambush.required){this.ambush.active=false;this.ambush.complete=true;this.completeObjective(1,'EMBOSCADA IMPERIAL ELIMINADA')}
+    }
     if(Math.random()<.16)this.drop(e.x,e.y);
   }
 
@@ -245,8 +268,18 @@ export class Game{
 
   spawnBoss(){
     this.enemies=[];const b=this.level.boss;
-    this.boss={x:b.x+780,targetX:b.x+330,y:555,hp:b.hp*this.mult,max:b.hp*this.mult,cool:55,name:b.name,anim:0,hit:0,attack:0,dead:false,death:0,entrance:82};
+    this.boss={x:b.x+780,targetX:b.x+330,y:555,hp:b.hp*this.mult,max:b.hp*this.mult,cool:55,name:b.name,anim:0,hit:0,attack:0,dead:false,death:0,entrance:82,pattern:0};
     this.player.x=Math.max(this.player.x,b.x-330);this.toast(`⚠ ARENA BLOQUEADA ⚠<br>${b.name} ESTÁ CHEGANDO`,2500);this.fx.boom();
+  }
+
+  startAmbush(){
+    if(!this.ambush||this.ambush.active)return;
+    this.ambush.active=true;this.toast('⚠ EMBOSCADA IMPERIAL ⚠<br>NÃO DEIXE NINGUÉM DE PÉ!',2200);this.fx.boom();
+    const types=['elite','shield','gunner','elite','drone','gunner','shield','elite'];
+    for(let i=0;i<this.ambush.required;i++){
+      const side=i%2?-1:1,x=side>0?this.ambush.x+300+(i%4)*85:this.ambush.x-260-(i%4)*75;
+      const e=new Enemy(types[i%types.length],x);e.hp*=this.mult;e.max=e.hp;e.event='ambush';this.enemies.push(e);
+    }
   }
 
   completeObjective(index,message){
@@ -284,6 +317,8 @@ export class Game{
     if(this.level.id===1&&this.currentObjective===1)objective+=` · ${this.hostages.filter(h=>h.rescued).length}/3`;
     if(this.level.id===2&&this.currentObjective===0)objective+=` · ${this.radios.filter(r=>r.dead).length}/3`;
     if(this.level.id===2&&this.currentObjective===1&&this.ally)objective+=` · HP ${Math.max(0,Math.ceil(this.ally.hp))}`;
+    if(this.level.id===3&&this.currentObjective===0&&this.breach)objective+=` · ${Math.max(0,Math.ceil(this.breach.hp))} HP`;
+    if(this.level.id===3&&this.currentObjective===1&&this.ambush)objective+=` · ${this.ambush.kills}/${this.ambush.required}`;
     document.querySelector('#objective').textContent=objective;
     document.querySelector('#score').textContent=String(Math.floor(this.score)).padStart(6,'0');
     document.querySelector('#grenades').textContent=`GRANADAS ×${this.player.grenades}`;
@@ -344,6 +379,15 @@ export class Game{
       drawAtlas(c,'support',2+Math.floor(a.anim/10)%2,3,4,4,-43,-98,86,98);c.restore();
       c.fillStyle='#111';c.fillRect(x-35,438,70,7);c.fillStyle='#55e7ff';c.fillRect(x-33,440,66*Math.max(0,a.hp/a.max),3);
     }
+    if(this.breach){
+      const b=this.breach,x=b.x-cam,col=b.dead?3:b.hit>0?1:b.hp<b.max*.45?2:0;
+      if(x>-260&&x<1540)drawAtlas(c,'citadelProps',col,0,4,3,x-155,285,310,270);
+      if(!b.dead){c.fillStyle='#120f17';c.fillRect(x-90,270,180,10);c.fillStyle='#ff793c';c.fillRect(x-87,273,174*Math.max(0,b.hp/b.max),4)}
+    }
+    if(this.ambush&&(this.ambush.active||this.ambush.complete)){
+      const type=this.ambush.active?'arenaClosed':'arenaOpen';
+      drawCitadelProp(c,type,this.ambush.left-cam,555,.82,false,this.time);drawCitadelProp(c,type,this.ambush.right-cam,555,.82,true,this.time);
+    }
 
     if(this.level.vehicle&&!this.vehicleTaken){
       const x=this.level.vehicle.x-cam,type=this.level.vehicle.type,row=vehicleRows[type]??0;
@@ -379,8 +423,9 @@ export class Game{
       if(b.hit>0){row=0;col=3}
       if(b.attack>0){col=damaged?1:2}
       if(b.dead){row=1;col=b.death>34?2:3}
-      const bossAtlas=this.level.id===2?'bossMammoth':'bossTrain';
-      if(!drawAtlas(c,bossAtlas,col,row,4,2,x-205,255,410,300)){
+      const bossAtlas=this.level.id===2?'bossMammoth':this.level.id===3?'bossVoss':'bossTrain';
+      const bossW=this.level.id===3?300:410,bossH=this.level.id===3?310:300;
+      if(!drawAtlas(c,bossAtlas,col,row,4,2,x-bossW/2,555-bossH,bossW,bossH)){
         c.fillStyle='#7e3443';c.fillRect(x-105,385,210,170);
       }
     }
@@ -393,13 +438,15 @@ export class Game{
     if(this.boss&&!this.boss.dead){
       const gx=this.level.boss.x-380-cam;
       if(this.level.id===2)drawJungleProp(c,'gateClosed',gx,555,.78,false,this.time);
+      else if(this.level.id===3)drawCitadelProp(c,'arenaClosed',gx,555,.8,false,this.time);
       else{c.fillStyle='#242b31';c.fillRect(gx-12,402,24,153);c.fillRect(1260,402,20,153);c.fillStyle='#ffcc31';for(let y=414;y<548;y+=28){c.save();c.translate(gx,y);c.rotate(-.55);c.fillRect(-18,-5,36,10);c.restore()}}
     }
     if(this.intro>0){
       c.fillStyle=`rgba(0,0,0,${Math.min(.55,this.intro/90)})`;c.fillRect(0,0,1280,720);
       c.textAlign='center';c.fillStyle='#ffd348';c.font='25px Black Ops One';c.fillText(`MISSÃO ${this.level.id}`,640,286);
       c.fillStyle='white';c.font='52px Black Ops One';c.fillText(this.level.name,640,345);
-      c.font='21px Rajdhani';c.fillText(this.level.id===2?'Derrube o sinal inimigo e leve o Dr. Trovão vivo até o laboratório!':'A Legião Ferro fechou o porto. Abra caminho e tire todo mundo de lá!',640,387);
+      const briefing=this.level.id===2?'Derrube o sinal inimigo e leve o Dr. Trovão vivo até o laboratório!':this.level.id===3?'Abra a muralha, sobreviva à armadilha e cale o General Voss!':'A Legião Ferro fechou o porto. Abra caminho e tire todo mundo de lá!';
+      c.font='21px Rajdhani';c.fillText(briefing,640,387);
     }
     if(this.player.combo>1){c.fillStyle='#ffe048';c.font='34px Black Ops One';c.textAlign='left';c.fillText(`${this.player.combo}× COMBO`,30,150)}
   }

@@ -1,6 +1,6 @@
 const makeImage=()=>typeof Image!=='undefined'?new Image():{complete:false,naturalWidth:0,naturalHeight:0};
 
-export const atlases={enemies:makeImage(),support:makeImage(),effects:makeImage(),bossTrain:makeImage(),bossMammoth:makeImage(),outpost:makeImage(),jungleProps:makeImage()};
+export const atlases={enemies:makeImage(),support:makeImage(),effects:makeImage(),bossTrain:makeImage(),bossMammoth:makeImage(),bossVoss:makeImage(),outpost:makeImage(),jungleProps:makeImage(),citadelProps:makeImage()};
 
 if(typeof Image!=='undefined'){
   atlases.enemies.src='assets/enemies/legion-atlas.webp';
@@ -8,8 +8,10 @@ if(typeof Image!=='undefined'){
   atlases.effects.src='assets/effects/combat-items-atlas.webp';
   atlases.bossTrain.src='assets/bosses/train-colossus-atlas.webp';
   atlases.bossMammoth.src='assets/bosses/mammoth-omega-atlas.webp';
+  atlases.bossVoss.src='assets/bosses/general-voss-atlas.webp';
   atlases.outpost.src='assets/structures/harbor-outpost-atlas.webp';
   atlases.jungleProps.src='assets/levels/jungle-storm/props-atlas.webp';
+  atlases.citadelProps.src='assets/levels/iron-citadel/props-atlas.webp';
 }
 
 export function drawAtlas(ctx,name,col,row,cols,rows,x,y,w,h){
