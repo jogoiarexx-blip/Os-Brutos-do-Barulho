@@ -3,6 +3,7 @@ const makeImage=()=>typeof Image!=='undefined'?new Image():{complete:false,natur
 const port={backdrop:makeImage(),midground:makeImage(),ground:makeImage(),props:makeImage()};
 const jungle={backdrop:makeImage(),midground:makeImage(),ground:makeImage(),props:makeImage()};
 const citadel={backdrop:makeImage(),midground:makeImage(),ground:makeImage(),props:makeImage()};
+const desert={backdrop:makeImage(),midground:makeImage(),ground:makeImage(),props:makeImage()};
 
 if(typeof Image!=='undefined'){
   port.backdrop.src='assets/levels/port-fire/backdrop.webp';
@@ -17,6 +18,10 @@ if(typeof Image!=='undefined'){
   citadel.midground.src='assets/levels/iron-citadel/midground.webp';
   citadel.ground.src='assets/levels/iron-citadel/ground.webp';
   citadel.props.src='assets/levels/iron-citadel/props-atlas.webp';
+  desert.backdrop.src='assets/levels/serpent-desert/backdrop.webp';
+  desert.midground.src='assets/levels/serpent-desert/midground.webp';
+  desert.ground.src='assets/levels/serpent-desert/ground.webp';
+  desert.props.src='assets/levels/serpent-desert/props-atlas.webp';
 }
 
 const propCells={
@@ -72,7 +77,25 @@ export function drawCitadelProp(c,type,x,y,scale=1,flip=false,time=0){
   c.drawImage(citadel.props,col*sw,row*sh,sw,sh,-w/2,-h,w,h);c.restore();
 }
 
+export function drawDesertProp(c,type,x,y,scale=1,flip=false){
+  const cells={depot:[0,0,345,235],convoy:[1,0,395,224],cactus:[0,1,270,182],rocks:[0,1,270,182],barrier:[1,1,285,155]};
+  const spec=cells[type];if(!spec||!loaded(desert.props))return;
+  const [col,row,w,h]=spec,sw=desert.props.naturalWidth/2,sh=desert.props.naturalHeight/2;
+  c.save();c.translate(x,y);c.scale((flip?-1:1)*scale,scale);
+  c.drawImage(desert.props,col*sw,row*sh,sw,sh,-w/2,-h,w,h);c.restore();
+}
+
 export function drawLevelScenery(c,level,cam,time){
+  if(level.id===4){
+    c.fillStyle='#b85333';c.fillRect(0,0,1280,720);
+    repeatImage(c,desert.backdrop,cam*.055,0,1665,555);
+    repeatImage(c,desert.midground,cam*.2,202,1065,355);
+    const haze=c.createLinearGradient(0,280,0,555);haze.addColorStop(0,'#fcb66600');haze.addColorStop(1,'#f8b05333');c.fillStyle=haze;c.fillRect(0,280,1280,275);
+    if(!repeatImage(c,desert.ground,cam,555,495,165)){c.fillStyle=level.ground;c.fillRect(0,555,1280,165)}
+    for(const[type,worldX,scale=1,flip=false]of level.scenery||[]){const x=worldX-cam;if(x>-230&&x<1510)drawDesertProp(c,type,x,555,scale,flip)}
+    c.fillStyle='#ffd49b';for(let i=0;i<34;i++){const x=((i*91-cam*.3-time*(1.2+i%3*.4))%1430+1430)%1430,y=140+(i*73+time*(.35+i%2*.2))%415;c.globalAlpha=.08+(i%3)*.06;c.fillRect(x,y,3+i%3,1+i%2)}c.globalAlpha=1;
+    return true;
+  }
   if(level.id===3){
     c.fillStyle='#160d1c';c.fillRect(0,0,1280,720);
     repeatImage(c,citadel.backdrop,cam*.05,0,1665,555);

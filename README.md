@@ -28,6 +28,8 @@ Depois acesse a pasta do projeto pelo endereço exibido no servidor local.
 - Fase 3 completa com cidadela em guerra, cinzas, holofotes, ruínas e piso fortificado
 - Portão blindado destrutível e emboscada imperial com arena fechada e contagem real de alvos
 - General Voss com atlas exclusivo de 8 quadros e padrões alternados de tiros em leque e ataques rasteiros
+- Fase 4 no deserto com parallax, poeira, piso e adereços próprios; três depósitos sabotáveis e comboio blindado que exige imobilização e aproximação para captura
+- Escorpião de Aço com sprite exclusivo, ferrão de plasma, rajada da garra e tiros direcionados; progresso da missão, checkpoint e vitória testados
 - Caixas e barris destrutíveis; barris vermelhos causam dano em área e caixas podem liberar armas ou vida
 - Introdução protegida, ondas iniciais menores e disparos do chefe apontados para a posição do jogador
 - Caminhada, corrida com Shift, pulo em etapas, agachar, dano, queda, levantar e vitória

@@ -1,6 +1,6 @@
 import {Player,Enemy,Bullet,Particle,clamp} from './entities.js';
-import {drawAtlas,vehicleRows,pickupCols} from './sprites.js';
-import {drawLevelScenery,drawSceneryProp,drawJungleProp,drawCitadelProp} from './scenery.js';
+import {atlases,drawAtlas,vehicleRows,pickupCols} from './sprites.js';
+import {drawLevelScenery,drawSceneryProp,drawJungleProp,drawCitadelProp,drawDesertProp} from './scenery.js';
 
 export class Game{
   constructor(canvas,input,fx,saveData,onEnd){
@@ -22,6 +22,8 @@ export class Game{
     this.ally=level.ally?{...level.ally,x:level.ally.start,y:555,max:level.ally.hp,active:false,complete:false,dead:false,inv:0,anim:0,dir:1}:null;
     this.breach=level.breach?{...level.breach,y:555,max:level.breach.hp,dead:false,hit:0,death:0}:null;
     this.ambush=level.ambush?{...level.ambush,active:false,complete:false,kills:0}:null;
+    this.depots=(level.depots||[]).map(d=>({...d,max:d.hp,dead:false,hit:0}));
+    this.convoy=level.convoy?{...level.convoy,max:level.convoy.hp,disabled:false,captured:false,hit:0,cool:75}:null;
     this.hostages=level.hostages.map(x=>({x,y:555,rescued:false,celebrate:0}));
     this.spawned=new Set;this.cam=0;this.score=0;this.coins=0;this.kills=0;
     this.currentObjective=0;this.boss=null;this.vehicleTaken=false;this.checkpoint=0;this.gateToast=0;
@@ -79,6 +81,23 @@ export class Game{
       if(!this.ambush.active&&this.player.x>=this.ambush.x-80)this.startAmbush();
       if(this.ambush.active)this.player.x=clamp(this.player.x,this.ambush.left,this.ambush.right);
     }
+    if(this.depots.length&&this.currentObjective===0)this.player.x=Math.min(this.player.x,this.level.depotGate);
+    if(this.convoy&&!this.convoy.captured&&this.currentObjective===1){
+      if(!this.convoy.disabled)this.player.x=Math.min(this.player.x,this.convoy.x-185);
+      else if(Math.abs(this.player.x-this.convoy.x)<165){
+        this.convoy.captured=true;this.completeObjective(1,'COMBOIO CAPTURADO');this.score+=1500;this.coins+=35;
+      }
+      this.player.x=Math.min(this.player.x,this.level.convoyGate);
+      if(!this.convoy.disabled&&Math.abs(this.player.x-this.convoy.x)<720){
+        this.convoy.cool-=dt;
+        if(this.convoy.cool<=0){
+          this.convoy.cool=65+Math.random()*25;
+          const sx=this.convoy.x-125,sy=385,dx=this.player.x-sx,dy=this.player.y-35-sy,len=Math.hypot(dx,dy)||1;
+          this.bullets.push(new Bullet(sx,sy,dx/len*6.5,dy/len*6.5,'enemy',12*this.mult,'#ffc256','heavy'));
+        }
+      }
+    }
+    this.depots.forEach(d=>{if(d.hit>0)d.hit-=dt});if(this.convoy?.hit>0)this.convoy.hit-=dt;
     if(this.currentObjective<2&&this.player.x>this.level.boss.x-430){
       this.player.x=this.level.boss.x-430;
       if(this.gateToast<=0){
@@ -159,6 +178,22 @@ export class Game{
             }
           }
         }
+        for(const depot of this.depots){
+          if(b.life<=0||depot.dead)continue;
+          if(Math.abs(b.x-depot.x)<125&&Math.abs(b.y-450)<108){
+            depot.hp-=b.damage;depot.hit=7;b.life=0;this.burst(b.x,b.y,'#ffc257',4);
+            if(depot.hp<=0){
+              depot.hp=0;depot.dead=true;this.score+=900;this.coins+=16;this.burst(depot.x,475,'#ff863c',26);this.fx.boom();
+              for(const e of this.enemies)if(!e.dead&&Math.abs(e.x-depot.x)<180){e.hp-=100;if(e.hp<=0)this.kill(e)}
+              if(Math.abs(this.player.x-depot.x)<130)this.hurt(18);
+              if(this.depots.every(d=>d.dead))this.completeObjective(0,'DEPÓSITOS SABOTADOS');
+            }
+          }
+        }
+        if(this.convoy&&!this.convoy.disabled&&b.life>0&&Math.abs(b.x-this.convoy.x)<170&&Math.abs(b.y-465)<94){
+          this.convoy.hp-=b.damage;this.convoy.hit=7;b.life=0;this.burst(b.x,b.y,'#ffae56',4);
+          if(this.convoy.hp<=0){this.convoy.hp=0;this.convoy.disabled=true;this.burst(this.convoy.x,475,'#ffa349',22);this.fx.boom();this.toast('COMBOIO IMOBILIZADO · APROXIME-SE PARA CAPTURAR')}
+        }
         if(this.breach&&!this.breach.dead&&b.life>0&&Math.abs(b.x-this.breach.x)<150&&Math.abs(b.y-410)<155){
           this.breach.hp-=b.damage;this.breach.hit=7;b.life=0;this.burst(b.x,b.y,'#ff9a43',5);
           if(this.breach.hp<=0){
@@ -181,7 +216,7 @@ export class Game{
             if(e.hp<=0)this.kill(e);
           }
         }
-        const bossHalfW=this.level.id===3?105:185,bossHalfH=this.level.id===3?135:105;
+        const bossHalfW=this.level.id===3?105:185,bossHalfH=this.level.id===3?135:this.level.id===4?145:105;
         if(this.boss&&!this.boss.dead&&b.life>0&&Math.abs(b.x-this.boss.x)<bossHalfW&&Math.abs(b.y-(this.boss.y-95))<bossHalfH){
           this.boss.hp-=b.damage;this.boss.hit=7;b.life=0;this.burst(b.x,b.y,'#ff712e',4);
           if(this.boss.hp<=0){
@@ -189,6 +224,7 @@ export class Game{
             if(this.level.id===1)this.completeObjective(2,'COLOSSO FERROVIÁRIO DESTRUÍDO');
             if(this.level.id===2)this.completeObjective(2,'MAMUTE ÔMEGA DESTRUÍDO');
             if(this.level.id===3)this.completeObjective(2,'GENERAL VOSS DERROTADO');
+            if(this.level.id===4)this.completeObjective(2,'ESCORPIÃO DE AÇO DERROTADO');
             this.burst(this.boss.x,this.boss.y-90,'#ff5a20',28);this.fx.boom();
           }
         }
@@ -207,6 +243,15 @@ export class Game{
         this.boss.pattern++;
         if(this.level.id===3&&this.boss.pattern%2===0){
           for(const speed of[6.4,8.2])this.bullets.push(new Bullet(sx,this.boss.y-22,-speed,0,'enemy',14*this.mult,'#ff8b35','heavy'));
+        }else if(this.level.id===4&&this.boss.pattern%3===0){
+          // Rajada rasteira da garra: pular ou usar o terreno para desviar.
+          for(const speed of[6.8,8.3,9.8])this.bullets.push(new Bullet(sx,this.boss.y-28,-speed,0,'enemy',13*this.mult,'#ffbc4a','heavy'));
+        }else if(this.level.id===4&&this.boss.pattern%3===1){
+          // Ferrão: três projéteis descendentes, com aviso visual da cauda.
+          for(const offset of[-100,0,100]){
+            const tx=this.player.x+offset,px=this.boss.x-105,py=this.boss.y-275,a=Math.atan2(535-py,tx-px);
+            this.bullets.push(new Bullet(px,py,Math.cos(a)*6.1,Math.sin(a)*6.1,'enemy',12*this.mult,'#5af3ff','laser'));
+          }
         }else{
           const spreads=this.level.id===3?[-.24,-.12,0,.12,.24]:[-.13,0,.13];
           for(const spread of spreads){const a=angle+spread,speed=enraged?7.4:6.6,color=this.level.id===2?'#55efff':'#ff6045';this.bullets.push(new Bullet(sx,sy,Math.cos(a)*speed,Math.sin(a)*speed,'enemy',12*this.mult,color,'heavy'))}
@@ -319,6 +364,8 @@ export class Game{
     if(this.level.id===2&&this.currentObjective===1&&this.ally)objective+=` · HP ${Math.max(0,Math.ceil(this.ally.hp))}`;
     if(this.level.id===3&&this.currentObjective===0&&this.breach)objective+=` · ${Math.max(0,Math.ceil(this.breach.hp))} HP`;
     if(this.level.id===3&&this.currentObjective===1&&this.ambush)objective+=` · ${this.ambush.kills}/${this.ambush.required}`;
+    if(this.level.id===4&&this.currentObjective===0)objective+=` · ${this.depots.filter(d=>d.dead).length}/${this.depots.length}`;
+    if(this.level.id===4&&this.currentObjective===1&&this.convoy)objective+=this.convoy.disabled?' · APROXIME-SE':` · ${Math.max(0,Math.ceil(this.convoy.hp))} HP`;
     document.querySelector('#objective').textContent=objective;
     document.querySelector('#score').textContent=String(Math.floor(this.score)).padStart(6,'0');
     document.querySelector('#grenades').textContent=`GRANADAS ×${this.player.grenades}`;
@@ -388,6 +435,24 @@ export class Game{
       const type=this.ambush.active?'arenaClosed':'arenaOpen';
       drawCitadelProp(c,type,this.ambush.left-cam,555,.82,false,this.time);drawCitadelProp(c,type,this.ambush.right-cam,555,.82,true,this.time);
     }
+    for(const depot of this.depots){
+      const x=depot.x-cam;if(x<-200||x>1480)continue;
+      if(!depot.dead){
+        drawDesertProp(c,'depot',x,555,.9);
+        if(depot.hit>0){c.fillStyle='#fff2a055';c.fillRect(x-155,345,310,210)}
+        c.fillStyle='#211910';c.fillRect(x-55,335,110,8);c.fillStyle='#ffc351';c.fillRect(x-53,337,106*depot.hp/depot.max,4);
+      }else{c.fillStyle='#332a26';c.fillRect(x-73,532,146,22);c.fillStyle='#ff994455';c.fillRect(x-50,528,100,5)}
+    }
+    if(this.convoy){
+      const v=this.convoy,x=v.x-cam;
+      if(x>-260&&x<1540){
+        c.save();if(v.captured)c.globalAlpha=.62;
+        drawDesertProp(c,'convoy',x,555,.82,false);c.restore();
+        if(v.hit>0){c.fillStyle='#fff1ae55';c.fillRect(x-165,375,330,180)}
+        if(v.disabled&&!v.captured){c.fillStyle='#fda553';c.font='18px Rajdhani';c.textAlign='center';c.fillText('APROXIME-SE PARA CAPTURAR',x,326)}
+        if(!v.disabled){c.fillStyle='#211910';c.fillRect(x-85,340,170,9);c.fillStyle='#ffc351';c.fillRect(x-82,343,164*v.hp/v.max,4)}
+      }
+    }
 
     if(this.level.vehicle&&!this.vehicleTaken){
       const x=this.level.vehicle.x-cam,type=this.level.vehicle.type,row=vehicleRows[type]??0;
@@ -425,7 +490,12 @@ export class Game{
       if(b.dead){row=1;col=b.death>34?2:3}
       const bossAtlas=this.level.id===2?'bossMammoth':this.level.id===3?'bossVoss':'bossTrain';
       const bossW=this.level.id===3?300:410,bossH=this.level.id===3?310:300;
-      if(!drawAtlas(c,bossAtlas,col,row,4,2,x-bossW/2,555-bossH,bossW,bossH)){
+      if(this.level.id===4&&atlases.bossScorpion.complete&&atlases.bossScorpion.naturalWidth){
+        c.save();if(b.dead)c.globalAlpha=Math.max(0,b.death/70);if(b.hit>0&&Math.floor(b.hit/2)%2)c.globalAlpha*=.55;
+        const bob=b.dead?0:Math.sin(b.anim*.11)*3;
+        c.drawImage(atlases.bossScorpion,x-250,555-333+bob,500,333);c.restore();
+        if(b.attack>0&&!b.dead){c.fillStyle='#5beeffaa';c.beginPath();c.arc(x-105,280,10+Math.sin(b.anim)*4,0,Math.PI*2);c.fill()}
+      }else if(!drawAtlas(c,bossAtlas,col,row,4,2,x-bossW/2,555-bossH,bossW,bossH)){
         c.fillStyle='#7e3443';c.fillRect(x-105,385,210,170);
       }
     }
@@ -439,13 +509,14 @@ export class Game{
       const gx=this.level.boss.x-380-cam;
       if(this.level.id===2)drawJungleProp(c,'gateClosed',gx,555,.78,false,this.time);
       else if(this.level.id===3)drawCitadelProp(c,'arenaClosed',gx,555,.8,false,this.time);
+      else if(this.level.id===4)drawDesertProp(c,'barrier',gx,555,.8,false);
       else{c.fillStyle='#242b31';c.fillRect(gx-12,402,24,153);c.fillRect(1260,402,20,153);c.fillStyle='#ffcc31';for(let y=414;y<548;y+=28){c.save();c.translate(gx,y);c.rotate(-.55);c.fillRect(-18,-5,36,10);c.restore()}}
     }
     if(this.intro>0){
       c.fillStyle=`rgba(0,0,0,${Math.min(.55,this.intro/90)})`;c.fillRect(0,0,1280,720);
       c.textAlign='center';c.fillStyle='#ffd348';c.font='25px Black Ops One';c.fillText(`MISSÃO ${this.level.id}`,640,286);
       c.fillStyle='white';c.font='52px Black Ops One';c.fillText(this.level.name,640,345);
-      const briefing=this.level.id===2?'Derrube o sinal inimigo e leve o Dr. Trovão vivo até o laboratório!':this.level.id===3?'Abra a muralha, sobreviva à armadilha e cale o General Voss!':'A Legião Ferro fechou o porto. Abra caminho e tire todo mundo de lá!';
+      const briefing=this.level.id===2?'Derrube o sinal inimigo e leve o Dr. Trovão vivo até o laboratório!':this.level.id===3?'Abra a muralha, sobreviva à armadilha e cale o General Voss!':this.level.id===4?'Exploda os depósitos, pare o comboio e desmonte o escorpião!':'A Legião Ferro fechou o porto. Abra caminho e tire todo mundo de lá!';
       c.font='21px Rajdhani';c.fillText(briefing,640,387);
     }
     if(this.player.combo>1){c.fillStyle='#ffe048';c.font='34px Black Ops One';c.textAlign='left';c.fillText(`${this.player.combo}× COMBO`,30,150)}
