@@ -17,6 +17,10 @@ const canvas={getContext:()=>({}),animate(){}};
 const asset=readFileSync(new URL('../assets/bosses/steel-scorpion-attack-atlas.webp',import.meta.url));
 assert.equal(asset.toString('ascii',0,4),'RIFF');
 assert.equal(asset.toString('ascii',8,12),'WEBP');
+assert.equal(asset.toString('ascii',12,16),'VP8X');
+assert.ok(asset[20]&0x10,'atlas deve manter canal alfa transparente');
+assert.equal(asset.readUIntLE(24,3)+1,1000);
+assert.equal(asset.readUIntLE(27,3)+1,666);
 assert.ok(asset.length>10000,'atlas não pode ser um arquivo vazio');
 
 for(const id of[1,2,3,4]){
