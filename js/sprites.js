@@ -1,6 +1,6 @@
 const makeImage=()=>typeof Image!=='undefined'?new Image():{complete:false,naturalWidth:0,naturalHeight:0};
 
-export const atlases={enemies:makeImage(),support:makeImage(),effects:makeImage(),bossTrain:makeImage(),bossMammoth:makeImage(),bossVoss:makeImage(),bossScorpion:makeImage(),bossGoliath:makeImage(),bossDrill:makeImage(),outpost:makeImage(),jungleProps:makeImage(),citadelProps:makeImage()};
+export const atlases={enemies:makeImage(),support:makeImage(),effects:makeImage(),bossTrain:makeImage(),bossMammoth:makeImage(),bossVoss:makeImage(),bossScorpion:makeImage(),bossGoliath:makeImage(),bossDrill:makeImage(),bossLeviathan:makeImage(),outpost:makeImage(),jungleProps:makeImage(),citadelProps:makeImage()};
 
 if(typeof Image!=='undefined'){
   atlases.enemies.src='assets/enemies/legion-atlas.webp';
@@ -12,6 +12,7 @@ if(typeof Image!=='undefined'){
   atlases.bossScorpion.src='assets/bosses/steel-scorpion-attack-atlas.webp';
   atlases.bossGoliath.src='assets/bosses/goliath-attack-atlas.webp';
   atlases.bossDrill.src='assets/bosses/titan-drill-attack-atlas.webp';
+  atlases.bossLeviathan.src='assets/bosses/toxic-leviathan-attack-atlas.webp';
   atlases.outpost.src='assets/structures/harbor-outpost-atlas.webp';
   atlases.jungleProps.src='assets/levels/jungle-storm/props-atlas.webp';
   atlases.citadelProps.src='assets/levels/iron-citadel/props-atlas.webp';

@@ -6,6 +6,7 @@ const citadel={backdrop:makeImage(),midground:makeImage(),ground:makeImage(),pro
 const desert={backdrop:makeImage(),midground:makeImage(),ground:makeImage(),props:makeImage()};
 const canyon={backdrop:makeImage(),midground:makeImage(),ground:makeImage(),props:makeImage()};
 const mine={backdrop:makeImage(),midground:makeImage(),ground:makeImage(),props:makeImage()};
+const swamp={backdrop:makeImage(),midground:makeImage(),ground:makeImage(),props:makeImage()};
 
 if(typeof Image!=='undefined'){
   port.backdrop.src='assets/levels/port-fire/backdrop.webp';
@@ -32,6 +33,10 @@ if(typeof Image!=='undefined'){
   mine.midground.src='assets/levels/abandoned-mines/midground.webp';
   mine.ground.src='assets/levels/abandoned-mines/ground.webp';
   mine.props.src='assets/levels/abandoned-mines/props-atlas.webp';
+  swamp.backdrop.src='assets/levels/toxic-swamp/backdrop.webp';
+  swamp.midground.src='assets/levels/toxic-swamp/midground.webp';
+  swamp.ground.src='assets/levels/toxic-swamp/ground.webp';
+  swamp.props.src='assets/levels/toxic-swamp/props-atlas.webp';
 }
 
 const propCells={
@@ -126,7 +131,28 @@ export function drawMineProp(c,type,x,y,scale=1,flip=false){
   c.drawImage(mine.props,col*sw,row*sh,sw,sh,-w/2,-h,w,h);c.restore();
 }
 
+export function drawSwampProp(c,type,x,y,scale=1,flip=false){
+  const cells={mask:[0,0,300,200],pump:[1,0,340,225],roots:[0,1,320,180],gate:[1,1,290,215]};
+  const spec=cells[type];if(!spec||!loaded(swamp.props))return;
+  const [col,row,w,h]=spec,sw=swamp.props.naturalWidth/2,sh=swamp.props.naturalHeight/2;
+  c.save();c.translate(x,y);c.scale((flip?-1:1)*scale,scale);
+  c.drawImage(swamp.props,col*sw,row*sh,sw,sh,-w/2,-h,w,h);c.restore();
+}
+
 export function drawLevelScenery(c,level,cam,time){
+  if(level.id===7){
+    c.fillStyle='#303b20';c.fillRect(0,0,1280,720);
+    repeatImage(c,swamp.backdrop,cam*.055,0,1665,555);
+    repeatImageFaded(c,swamp.midground,cam*.2,202,1065,355);
+    const mist=c.createLinearGradient(0,300,0,555);mist.addColorStop(0,'#90ca3600');mist.addColorStop(1,'#7fc8302e');c.fillStyle=mist;c.fillRect(0,300,1280,255);
+    if(!repeatImage(c,swamp.ground,cam,555,495,165)){c.fillStyle=level.ground;c.fillRect(0,555,1280,165)}
+    for(const[type,worldX,scale=1,flip=false]of level.scenery||[]){const x=worldX-cam;if(x>-250&&x<1530)drawSwampProp(c,type,x,555,scale,flip)}
+    for(const worldX of level.poison||[]){const x=worldX-cam;if(x<-210||x>1490)continue;
+      const glow=c.createRadialGradient(x,542,5,x,542,180);glow.addColorStop(0,'#a3ed5360');glow.addColorStop(1,'#a3ed5300');c.fillStyle=glow;c.fillRect(x-180,370,360,190);
+      c.fillStyle='#b7f97670';for(let i=0;i<9;i++){const px=x+Math.sin(time*.04+i*2.3)*75+(i-4)*15,py=515-((time*(.45+i%3*.2)+i*53)%110);c.beginPath();c.arc(px,py,2+i%3,0,7);c.fill()}
+    }
+    return true;
+  }
   if(level.id===6){
     c.fillStyle='#10253c';c.fillRect(0,0,1280,720);
     repeatImage(c,mine.backdrop,cam*.055,0,1665,555);

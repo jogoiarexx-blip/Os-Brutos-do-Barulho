@@ -4,6 +4,15 @@ export const ATTACK_DURATION=30;
 export const IMPACT_AT=17;
 
 export function bossAnimationFrame(levelId,boss){
+  if(levelId===7){
+    let col=0,row=0;
+    if(boss.attack>0){
+      if(boss.attack>IMPACT_AT){col=1;row=0}
+      else if(boss.attack>8){col=boss.attackKind==='surge'?1:0;row=1}
+      else{col=1;row=0}
+    }
+    return {atlas:'bossLeviathan',col,row,cols:2,rows:2,w:530,h:353};
+  }
   if(levelId===6){
     let col=0,row=0;
     if(boss.attack>0){

@@ -35,6 +35,8 @@ Depois acesse a pasta do projeto pelo endereço exibido no servidor local.
 - Fortaleza Móvel Goliath com quatro poses em atlas WebP, ataques alternados de canhão e mísseis sincronizados com o sprite e teste de progressão até a fase 6
 - Fase 6 Minas Abandonadas com cenário subterrâneo próprio, três guinchos destrutíveis, jaulas com vida, resgate obrigatório dos três mineiros e portões por objetivo
 - Broca Titã com quatro poses WebP, broca rasteira e terremoto de destroços precedidos por animação de preparo; testes de ataques e partida completa
+- Fase 7 Pântano Tóxico com parallax, piso e sprites WebP próprios; três filtros que reduzem dano do gás, três bombas químicas destrutíveis e bloqueios por objetivo
+- Leviatã Tóxico com quatro poses, jato de veneno e onda rasteira sincronizados com o disparo; testes de dano, progressão e partida completa
 - Caixas e barris destrutíveis; barris vermelhos causam dano em área e caixas podem liberar armas ou vida
 - Introdução protegida, ondas iniciais menores e disparos do chefe apontados para a posição do jogador
 - Caminhada, corrida com Shift, pulo em etapas, agachar, dano, queda, levantar e vitória
