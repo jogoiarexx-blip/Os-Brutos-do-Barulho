@@ -1,5 +1,6 @@
 import {Player,Enemy,Bullet,Particle,clamp} from './entities.js';
-import {atlases,drawAtlas,vehicleRows,pickupCols} from './sprites.js';
+import {drawAtlas,vehicleRows,pickupCols} from './sprites.js';
+import {ATTACK_DURATION,IMPACT_AT,bossAnimationFrame} from './boss-animations.js';
 import {drawLevelScenery,drawSceneryProp,drawJungleProp,drawCitadelProp,drawDesertProp} from './scenery.js';
 
 export class Game{
@@ -234,29 +235,33 @@ export class Game{
       if(b.team==='enemy'&&b.life>0&&this.ally?.active&&!this.ally.complete&&!this.ally.dead&&Math.abs(b.x-this.ally.x)<25&&Math.abs(b.y-(this.ally.y-32))<40){b.life=0;this.hurtAlly(b.damage)}
     }
     if(this.boss&&!this.boss.dead&&this.boss.entrance<=0){
-      this.boss.cool--;
-      if(this.boss.cool<0){
-        const enraged=this.boss.hp<this.boss.max*.5;
-        this.boss.cool=enraged?34:48;this.boss.attack=14;
-        const sx=this.boss.x-180,sy=this.boss.y-205;
-        const dx=this.player.x-sx,dy=(this.player.y-35)-sy,len=Math.hypot(dx,dy)||1,angle=Math.atan2(dy,dx);
-        this.boss.pattern++;
-        if(this.level.id===3&&this.boss.pattern%2===0){
-          for(const speed of[6.4,8.2])this.bullets.push(new Bullet(sx,this.boss.y-22,-speed,0,'enemy',14*this.mult,'#ff8b35','heavy'));
-        }else if(this.level.id===4&&this.boss.pattern%3===0){
-          // Rajada rasteira da garra: pular ou usar o terreno para desviar.
-          for(const speed of[6.8,8.3,9.8])this.bullets.push(new Bullet(sx,this.boss.y-28,-speed,0,'enemy',13*this.mult,'#ffbc4a','heavy'));
-        }else if(this.level.id===4&&this.boss.pattern%3===1){
-          // Ferrão: três projéteis descendentes, com aviso visual da cauda.
-          for(const offset of[-100,0,100]){
-            const tx=this.player.x+offset,px=this.boss.x-105,py=this.boss.y-275,a=Math.atan2(535-py,tx-px);
-            this.bullets.push(new Bullet(px,py,Math.cos(a)*6.1,Math.sin(a)*6.1,'enemy',12*this.mult,'#5af3ff','laser'));
-          }
-        }else{
-          const spreads=this.level.id===3?[-.24,-.12,0,.12,.24]:[-.13,0,.13];
-          for(const spread of spreads){const a=angle+spread,speed=enraged?7.4:6.6,color=this.level.id===2?'#55efff':'#ff6045';this.bullets.push(new Bullet(sx,sy,Math.cos(a)*speed,Math.sin(a)*speed,'enemy',12*this.mult,color,'heavy'))}
-        }
+      const boss=this.boss;
+      if(boss.attack>0){
+        if(!boss.fired&&boss.attack<=IMPACT_AT){boss.fired=true;this.fireBossAttack()}
+      }else if(--boss.cool<0){
+        boss.pattern++;boss.fired=false;boss.attack=ATTACK_DURATION;
+        boss.attackKind=this.level.id===3&&boss.pattern%2===0?'low':this.level.id===4&&boss.pattern%3===0?'claw':this.level.id===4&&boss.pattern%3===1?'sting':'volley';
+        boss.cool=boss.hp<boss.max*.5?34:48;
       }
+    }
+  }
+
+  fireBossAttack(){
+    const boss=this.boss,enraged=boss.hp<boss.max*.5;
+    const sx=boss.x-(this.level.id===3?115:180),sy=boss.y-205;
+    const dx=this.player.x-sx,dy=this.player.y-35-sy,angle=Math.atan2(dy,dx);
+    if(boss.attackKind==='low'){
+      for(const speed of[6.4,8.2])this.bullets.push(new Bullet(sx,boss.y-22,-speed,0,'enemy',14*this.mult,'#ff8b35','heavy'));
+    }else if(boss.attackKind==='claw'){
+      for(const speed of[6.8,8.3,9.8])this.bullets.push(new Bullet(sx,boss.y-28,-speed,0,'enemy',13*this.mult,'#ffbc4a','heavy'));
+    }else if(boss.attackKind==='sting'){
+      for(const offset of[-100,0,100]){
+        const tx=this.player.x+offset,px=boss.x-105,py=boss.y-275,a=Math.atan2(535-py,tx-px);
+        this.bullets.push(new Bullet(px,py,Math.cos(a)*6.1,Math.sin(a)*6.1,'enemy',12*this.mult,'#5af3ff','laser'));
+      }
+    }else{
+      const spreads=this.level.id===3?[-.24,-.12,0,.12,.24]:[-.13,0,.13];
+      for(const spread of spreads){const a=angle+spread,speed=enraged?7.4:6.6,color=this.level.id===2?'#55efff':'#ff6045';this.bullets.push(new Bullet(sx,sy,Math.cos(a)*speed,Math.sin(a)*speed,'enemy',12*this.mult,color,'heavy'))}
     }
   }
 
@@ -313,7 +318,7 @@ export class Game{
 
   spawnBoss(){
     this.enemies=[];const b=this.level.boss;
-    this.boss={x:b.x+780,targetX:b.x+330,y:555,hp:b.hp*this.mult,max:b.hp*this.mult,cool:55,name:b.name,anim:0,hit:0,attack:0,dead:false,death:0,entrance:82,pattern:0};
+    this.boss={x:b.x+780,targetX:b.x+330,y:555,hp:b.hp*this.mult,max:b.hp*this.mult,cool:55,name:b.name,anim:0,hit:0,attack:0,attackKind:'volley',fired:false,dead:false,death:0,entrance:82,pattern:0};
     this.player.x=Math.max(this.player.x,b.x-330);this.toast(`⚠ ARENA BLOQUEADA ⚠<br>${b.name} ESTÁ CHEGANDO`,2500);this.fx.boom();
   }
 
@@ -483,19 +488,14 @@ export class Game{
     this.enemies.forEach(e=>e.draw(c,cam));
 
     if(this.boss){
-      const b=this.boss,x=b.x-cam,damaged=b.hp<b.max*.5;
-      let row=damaged?1:0,col=Math.floor(b.anim/10)%2;
-      if(b.hit>0){row=0;col=3}
-      if(b.attack>0){col=damaged?1:2}
-      if(b.dead){row=1;col=b.death>34?2:3}
-      const bossAtlas=this.level.id===2?'bossMammoth':this.level.id===3?'bossVoss':'bossTrain';
-      const bossW=this.level.id===3?300:410,bossH=this.level.id===3?310:300;
-      if(this.level.id===4&&atlases.bossScorpion.complete&&atlases.bossScorpion.naturalWidth){
-        c.save();if(b.dead)c.globalAlpha=Math.max(0,b.death/70);if(b.hit>0&&Math.floor(b.hit/2)%2)c.globalAlpha*=.55;
-        const bob=b.dead?0:Math.sin(b.anim*.11)*3;
-        c.drawImage(atlases.bossScorpion,x-250,555-333+bob,500,333);c.restore();
-        if(b.attack>0&&!b.dead){c.fillStyle='#5beeffaa';c.beginPath();c.arc(x-105,280,10+Math.sin(b.anim)*4,0,Math.PI*2);c.fill()}
-      }else if(!drawAtlas(c,bossAtlas,col,row,4,2,x-bossW/2,555-bossH,bossW,bossH)){
+      const b=this.boss,x=b.x-cam,frame=bossAnimationFrame(this.level.id,b);
+      c.save();
+      if(this.level.id===4&&b.dead)c.globalAlpha=Math.max(0,b.death/70);
+      if(this.level.id===4&&b.hit>0&&Math.floor(b.hit/2)%2)c.globalAlpha*=.55;
+      const bob=this.level.id===4&&!b.dead?Math.sin(b.anim*.11)*3:0;
+      const drawn=drawAtlas(c,frame.atlas,frame.col,frame.row,frame.cols,frame.rows,x-frame.w/2,555-frame.h+bob,frame.w,frame.h);
+      c.restore();
+      if(!drawn){
         c.fillStyle='#7e3443';c.fillRect(x-105,385,210,170);
       }
     }
